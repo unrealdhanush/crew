@@ -3,70 +3,89 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Crew graph</title>
+<title>Team graph · Crew</title>
+<link rel="stylesheet" href="/static/crew.css">
 <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
 <style>
-  :root { --bg:#0d1117; --panel:#161b22; --line:#30363d; --text:#e6edf3; --muted:#8b949e; --hot:#f7b955; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 ui-sans-serif, system-ui, sans-serif;
-         display:grid; grid-template-columns: 1fr 380px; height:100vh; }
-  #net { height:100vh; }
-  aside { background:var(--panel); border-left:1px solid var(--line); padding:20px; overflow:auto; }
-  h1 { font-size:18px; margin:0 0 4px; } h1 span { color:var(--hot); }
-  .sub { color:var(--muted); margin-bottom:18px; }
-  #title { font-size:16px; font-weight:600; margin:0 0 12px; min-height:22px; }
-  .path { border:1px solid var(--line); border-left:3px solid var(--hot); border-radius:6px; padding:10px 12px;
-          margin-bottom:10px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px; }
-  .empty { color:var(--muted); font-style:italic; }
-  .legend { display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:22px; color:var(--muted); font-size:12px; }
-  .legend i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
-  #stats { color:var(--muted); font-size:12px; margin-top:12px; }
-  .toggle { margin-top:10px; font:500 12px/1 inherit; color:var(--text); background:none; cursor:pointer;
-            border:1px solid var(--line); border-radius:6px; padding:6px 9px; }
-  .toggle:hover { border-color:var(--hot); }
-  @media (max-width: 800px) { body { grid-template-columns:1fr; grid-template-rows: 60vh auto; } #net { height:60vh; } }
+  body { --h:100vh; }
+  body.top-level { --h:calc(100vh - var(--nav)); }
+  .app { display:grid; grid-template-columns:1fr 360px; height:var(--h); }
+  .canvas { position:relative; height:var(--h); background:#fff; min-width:0; }
+  #net { height:100%; }
+  #net .vis-network { outline:none; }
+  aside { background:var(--paper); border-left:2px solid var(--ink); padding:20px; overflow:auto; }
+  aside h1 { font-size:22px; }
+  .sub { color:var(--muted); margin:6px 0 18px; font-size:15px; }
+  #title { font:700 17px var(--display); margin:0 0 12px; }
+  #title:empty { display:none; }
+  .path { border:1px solid var(--line); border-left:4px solid var(--brain); background:var(--card); border-radius:8px; padding:10px 12px;
+          margin-bottom:10px; font-family:var(--mono); font-size:13px; word-break:break-word; }
+  .hint { color:var(--muted); font-size:14px; }
+  .legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:22px; }
+  .legend .node { padding:1px 9px; font-size:12px; flex-direction:row; }
+  #stats { color:var(--muted); font-size:13px; margin-top:14px; }
+  #focus { margin-top:12px; }
+  #emptyg { position:absolute; inset:0; display:none; place-items:center; padding:24px; text-align:center; z-index:2; background:#fff; }
+  #emptyg.show { display:grid; }
+  #emptyg .box { max-width:340px; }
+  #emptyg h2 { font-size:22px; margin-bottom:8px; }
+  #emptyg p { color:var(--muted); margin:0 0 16px; }
+  #emptyg .row { justify-content:center; }
+  @media (max-width:900px) { .app { grid-template-columns:1fr 270px; } aside { padding:16px; } }
+  @media (max-width:620px) { .app { grid-template-columns:1fr; grid-template-rows:60vh auto; height:auto; } .canvas { height:60vh; }
+    aside { border-left:0; border-top:2px solid var(--ink); } }
 </style>
 </head>
 <body>
-<div id="net"></div>
-<aside>
-  <h1>Crew <span>●</span> team graph</h1>
-  <div class="sub">Every answer is a path. The highlighted one is the latest.</div>
-  <div id="title"></div>
-  <div id="paths"><div class="empty">Ask Crew something to light up a path.</div></div>
-  <div class="legend" id="legend"></div>
-  <div id="stats"></div>
-  <button id="focus" class="toggle" type="button"></button>
-</aside>
+<div class="app" id="main">
+  <div class="canvas">
+    <div id="net" role="img" aria-label="Interactive graph of your team, its code and the conference agenda"></div>
+    <div id="emptyg"><div class="box"><h2>The graph is empty</h2>
+      <p>It fills in as you publish an agenda and connect your team.</p>
+      <div class="row"><a class="btn small" href="/organizer" target="_top">Publish an agenda</a><a class="btn small sun" href="/team" target="_top">Connect a team</a></div></div></div>
+  </div>
+  <aside>
+    <h1>Team graph</h1>
+    <p class="sub">Every answer is a path. The highlighted one is the latest.</p>
+    <div id="title"></div>
+    <div id="paths"><div class="hint">Ask Crew a question, or tap a door, and its path lights up here.</div></div>
+    <div class="legend" id="legend" aria-label="Legend"></div>
+    <div id="stats" role="status"></div>
+    <button id="focus" class="btn ghost small" type="button" aria-pressed="true"></button>
+    <p class="hint" style="margin-top:16px">Drag to move, scroll to zoom, hover a dot for its name.</p>
+  </aside>
+</div>
+<script src="/static/crew.js"></script>
 <script>
-const COLORS = { Person:"#f7b955", Repo:"#58a6ff", Package:"#3fb950", Topic:"#a371f7", Session:"#ff7b72",
-                 Speaker:"#ffa657", Note:"#79c0ff", Source:"#8b949e", Digest:"#6e7681" };
-const DIM = "rgba(110,118,129,0.25)";
+if (window.top === window) { document.body.classList.add("top-level"); Crew.nav("/viz"); }
+const COLORS = { Person:"#FFC53D", Repo:"#8CC1FF", Package:"#6FDCC4", Topic:"#C4B5FD", Session:"#FF9A8C", Speaker:"#FFB870",
+                 Note:"#C9E3FF", Source:"#D5D9E8", Digest:"#B9BFD8" };
+const INK = "#161A33", DIM = "rgba(88,96,128,0.22)";
 const nodes = new vis.DataSet(), edges = new vis.DataSet();
 const network = new vis.Network(document.getElementById("net"), { nodes, edges }, {
-  nodes: { shape:"dot", size:10, font:{ color:"#c9d1d9", size:12, strokeWidth:3, strokeColor:"#0d1117" } },
-  edges: { arrows:{ to:{ enabled:true, scaleFactor:0.4 } }, color:{ color:DIM }, width:1,
-           font:{ color:"#8b949e", size:9, strokeWidth:0, align:"middle" }, smooth:{ type:"continuous" } },
+  nodes: { shape:"dot", size:10, font:{ color:INK, size:12, strokeWidth:4, strokeColor:"#ffffff", face:"system-ui" } },
+  edges: { arrows:{ to:{ enabled:true, scaleFactor:0.4 } }, color:{ color:"#AEB5D0" }, width:1.2,
+           font:{ color:"#586080", size:10, strokeWidth:3, strokeColor:"#ffffff", align:"middle" }, smooth:{ type:"continuous" } },
   physics: { stabilization:{ iterations:200 }, barnesHut:{ gravitationalConstant:-6000, springLength:120 } },
   interaction: { hover:true },
 });
 document.getElementById("legend").innerHTML =
-  Object.entries(COLORS).map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join("");
+  Object.entries(COLORS).map(([k, c]) => `<span class="node" style="background:${c}">${k}</span>`).join("");
 
 let graphSig = "", lastHighlight = 0, hot = { nodes:new Set(), edges:new Set() };
 
 function styleNode(n) {
   const isHot = hot.nodes.has(n.id), anyHot = hot.nodes.size > 0;
-  const c = COLORS[n.label] || "#c9d1d9";
+  const c = COLORS[n.label] || "#D5D9E8";
   return { id:n.id, label:n.name, title:`${n.label}: ${n.name}`,
-           color:{ background: anyHot && !isHot ? DIM : c, border: isHot ? "#ffffff" : c },
-           size: isHot ? 18 : (n.label === "Person" ? 14 : 9), borderWidth: isHot ? 3 : 1,
-           font:{ color: anyHot && !isHot ? "rgba(201,209,217,0.3)" : "#e6edf3", size: isHot ? 14 : 11 } };
+           color:{ background: anyHot && !isHot ? "#E4E7F3" : c, border: isHot ? INK : (anyHot ? "#E4E7F3" : INK) },
+           size: isHot ? 18 : (n.label === "Person" ? 14 : 9), borderWidth: isHot ? 4 : 1.5,
+           font:{ color: anyHot && !isHot ? "rgba(22,26,51,0.3)" : INK, size: isHot ? 14 : 11 } };
 }
 function styleEdge(e) {
   const isHot = hot.edges.has(e.id);
   return { id:e.id, from:e.src, to:e.dst, label: isHot ? e.type : "",
-           color:{ color: isHot ? "#f7b955" : DIM }, width: isHot ? 3 : 1 };
+           color:{ color: isHot ? "#5B45F5" : "#AEB5D0" }, width: isHot ? 4 : 1.2 };
 }
 let raw = { nodes:[], edges:[] };
 function render() {
@@ -77,7 +96,10 @@ function render() {
 let focusMode = true;
 try { focusMode = localStorage.getItem("crew.viz.focus") !== "0"; } catch (e) {}
 const focusBtn = document.getElementById("focus");
-function paintFocus() { focusBtn.textContent = focusMode ? "Showing bridges only · show everything" : "Showing everything · bridges only"; }
+function paintFocus() {
+  focusBtn.textContent = focusMode ? "Showing bridges only. Show everything" : "Showing everything. Show bridges only";
+  focusBtn.setAttribute("aria-pressed", String(focusMode));
+}
 focusBtn.onclick = () => {
   focusMode = !focusMode; paintFocus(); graphSig = "";
   try { localStorage.setItem("crew.viz.focus", focusMode ? "1" : "0"); } catch (e) {}
@@ -88,6 +110,7 @@ async function loadGraph() {
   const mode = focusMode;
   const g = await (await fetch(`/api/graph?focus=${mode ? 1 : 0}`)).json();
   if (mode !== focusMode) return;  // the toggle changed while this was loading: a newer request will draw
+  document.getElementById("emptyg").classList.toggle("show", !g.nodes.length);
   const sig = g.nodes.map(n => n.id).sort().join(",") + "|" + g.edges.map(e => e.id).sort().join(",");
   if (sig === graphSig) return;
   graphSig = sig; raw = g;
@@ -96,8 +119,8 @@ async function loadGraph() {
   edges.remove(edges.getIds().filter(id => !eids.has(id)));
   render();
   document.getElementById("stats").textContent = g.total && g.total.nodes !== g.nodes.length
-    ? `${g.nodes.length} of ${g.total.nodes} nodes · ${g.edges.length} edges`
-    : `${g.nodes.length} nodes · ${g.edges.length} edges`;
+    ? `${g.nodes.length} of ${g.total.nodes} nodes, ${g.edges.length} edges`
+    : `${g.nodes.length} nodes, ${g.edges.length} edges`;
 }
 async function loadHighlight() {
   const h = await (await fetch("/api/highlight")).json();
@@ -109,7 +132,7 @@ async function loadHighlight() {
   const box = document.getElementById("paths");
   box.innerHTML = h.paths.length
     ? h.paths.map(p => `<div class="path"></div>`).join("")
-    : `<div class="empty">No path found — and that's the answer.</div>`;
+    : `<div class="hint">No path found, and that's the answer.</div>`;
   box.querySelectorAll(".path").forEach((el, i) => el.textContent = h.paths[i].text);
   await loadGraph(); render();
   if (hot.nodes.size) network.fit({ nodes:[...hot.nodes].filter(id => nodes.get(id)), animation:{ duration:600 } });

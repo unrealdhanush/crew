@@ -3,58 +3,59 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Crew door stickers</title>
+<title>Door stickers · Crew</title>
 <link rel="stylesheet" href="/static/crew.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <style>
-  .controls { max-width:1080px; margin:0 auto; padding:28px 24px 8px; }
-  .controls .row { max-width:720px; }
-  .sheet { max-width:1080px; margin:0 auto; padding:16px 24px 48px; display:grid;
-           grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px; }
-  .sticker { background:#fff; color:#111; border-radius:14px; padding:18px; display:grid;
-             grid-template-columns:1fr 120px; gap:14px; align-items:center; break-inside:avoid; }
-  .sticker .ev { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#8a5a00; font-weight:700; }
-  .sticker .t { font-weight:700; font-size:16px; line-height:1.25; margin:4px 0; }
-  .sticker .m { font-size:12px; color:#555; }
-  .sticker .cta { margin-top:10px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; }
-  .sticker .cta svg { flex:none; }
-  .sticker .u { font-family:ui-monospace, Menlo, monospace; font-size:9px; color:#777; word-break:break-all; margin-top:6px; }
+  .controls { max-width:1120px; margin:0 auto; padding:32px 24px 8px; }
+  .controls .box { max-width:760px; }
+  .sheet { max-width:1120px; margin:0 auto; padding:16px 24px 56px; display:grid;
+           grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:20px; }
+  .sticker { background:#fff; color:#161A33; border:2px solid #161A33; border-radius:16px; box-shadow:var(--pop); overflow:hidden;
+             break-inside:avoid; display:flex; flex-direction:column; }
+  .sticker .band { background:var(--sun); border-bottom:2px solid #161A33; padding:6px 16px; font:700 13px var(--display); }
+  .sticker .main { display:grid; grid-template-columns:1fr 120px; gap:16px; align-items:center; padding:16px; }
+  .sticker .t { font:800 19px/1.2 var(--display); letter-spacing:-.01em; margin:0 0 6px; }
+  .sticker .m { font-size:13px; color:#586080; }
+  .sticker .cta { margin-top:12px; font-size:14px; font-weight:700; display:flex; align-items:center; gap:6px; }
+  .sticker .u { font-family:var(--mono); font-size:9px; color:#586080; word-break:break-all; margin-top:6px; }
   .sticker .qr svg { width:120px; height:120px; display:block; }
+  @media (max-width:520px) { .sticker .main { grid-template-columns:1fr; } .sticker .qr svg { width:140px; height:140px; } }
   @media print {
     @page { margin:12mm; }
     body { background:#fff; }
-    nav.top, .controls { display:none; }
+    nav.top, .controls, .skip { display:none; }
     .sheet { padding:0; max-width:none; grid-template-columns:1fr 1fr; gap:8mm; }
-    .sticker { border:1px dashed #999; }
+    .sticker { box-shadow:none; border:1px dashed #666; }
   }
 </style>
 </head>
 <body>
-<section class="controls stack">
-  <div>
-    <h3>Organizer</h3>
-    <h2>Door stickers</h2>
-    <p class="muted small">One sticker per session. Write each URL to an NFC tag (any NFC writer app does it) and stick it on
-      the door with this card. Phones that don't do NFC can scan the QR code instead. Neither needs an app.</p>
+<section class="controls stack" id="main">
+  <div class="box">
+    <ol class="crumbs"><li>1 Agenda</li><li class="on">2 Door stickers</li><li>3 Send teams to onboarding</li></ol>
+    <h1>Door stickers</h1>
+    <p class="lede" style="font-size:16px">One sticker per session. Write each address to an NFC tag (any NFC writer app does it) and
+      stick it by the door with this card. Phones without NFC can scan the QR code. Neither needs an app.</p>
   </div>
-  <div class="row">
-    <div class="grow"><label for="base">Address phones will open</label><input type="text" id="base"></div>
-    <button class="btn" onclick="print()">Print</button>
+  <div class="row box">
+    <div class="grow"><label for="base">Address phones will open</label><input type="text" id="base" autocomplete="off"></div>
+    <button class="btn" type="button" id="print">Print stickers</button>
   </div>
-  <p class="muted small">Phones can't open <code>127.0.0.1</code>. For real stickers, start Crew with
-    <code>CREW_HOST=0.0.0.0</code> and put your laptop's network address here, e.g. <code>http://192.168.1.20:8765</code>.</p>
+  <div class="banner box" id="localwarn" hidden>Phones can't open <code>127.0.0.1</code> or <code>localhost</code>. Start Crew with
+    <code>CREW_HOST=0.0.0.0</code> and put your laptop's network address above, like <code>http://192.168.1.20:8765</code>.</div>
 </section>
-<section class="sheet" id="sheet"></section>
+<section class="sheet" id="sheet" aria-live="polite"></section>
 <script src="/static/crew.js"></script>
 <script>
 Crew.nav("/organizer");
-const esc = Crew.esc, NFC = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+const esc = Crew.esc, NFC = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
   stroke-linecap="round" aria-hidden="true"><path d="M6 8.5a5 5 0 0 1 0 7"/><path d="M9.5 6a8.5 8.5 0 0 1 0 12"/>
   <path d="M13 3.5a12 12 0 0 1 0 17"/></svg>`;
 let sessions = [], eventName = "";
 
 function qrSvg(text) {
-  if (typeof qrcode !== "function") return "";  // CDN unreachable: the URL is still printed
+  if (typeof qrcode !== "function") return "";  // CDN unreachable: the address is still printed
   const qr = qrcode(0, "M");
   qr.addData(text); qr.make();
   return qr.createSvgTag({ cellSize:4, margin:0, scalable:true });
@@ -62,23 +63,25 @@ function qrSvg(text) {
 
 function render() {
   const base = document.getElementById("base").value.replace(/\/+$/, "");
+  document.getElementById("localwarn").hidden = !/\/\/(127\.0\.0\.1|localhost)/.test(base);
   document.getElementById("sheet").innerHTML = sessions.length ? sessions.map(s => {
     const url = `${base}/tap?s=${encodeURIComponent(s.sid)}`;
-    return `<div class="sticker"><div>
-        <div class="ev">${esc(eventName || "Crew")}</div>
-        <div class="t">${esc(s.title)}</div>
+    return `<div class="sticker"><div class="band">${esc(eventName || "Crew")}</div><div class="main"><div>
+        <p class="t">${esc(s.title)}</p>
         <div class="m">${esc([s.start && s.start.replace("T", " "), s.room].filter(Boolean).join(" · "))}</div>
         <div class="cta">${NFC} Tap or scan to check in</div>
         <div class="u">${esc(url)}</div>
-      </div><div class="qr">${qrSvg(url)}</div></div>`;
-  }).join("") : `<p class="muted">No sessions yet. <a href="/organizer">Publish the agenda</a> first.</p>`;
+      </div><div class="qr" role="img" aria-label="QR code for ${esc(s.title)}">${qrSvg(url)}</div></div></div>`;
+  }).join("") : `<div class="empty" style="grid-column:1/-1"><b>No sessions yet.</b><br>Stickers appear here once an agenda is published.<br><br>
+      <a class="btn" href="/organizer">Publish an agenda</a></div>`;
 }
 
 const baseInput = document.getElementById("base");
 baseInput.value = location.origin;
 baseInput.oninput = render;
+document.getElementById("print").onclick = () => print();
 Promise.all([Crew.api("/api/doors"), Crew.api("/api/setup")]).then(([doors, setup]) => {
-  sessions = doors.sessions; eventName = setup.event?.name || "";
+  sessions = doors.sessions || []; eventName = setup.event?.name || "";
   render();
 });
 </script>

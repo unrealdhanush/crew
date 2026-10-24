@@ -2,49 +2,42 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Crew check-in</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Check in · Crew</title>
+<link rel="stylesheet" href="/static/crew.css">
 <style>
-  :root { --bg:#0d1117; --panel:#161b22; --line:#30363d; --text:#e6edf3; --muted:#8b949e; --hot:#f7b955;
-          --ok:#3fb950; --bad:#ff7b72; --link:#58a6ff; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 ui-sans-serif, system-ui, sans-serif;
-         padding:20px 16px 32px; }
-  header { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px; margin-bottom:16px; }
-  header b { color:var(--text); }
-  .dot { width:8px; height:8px; border-radius:50%; background:var(--hot); }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
-  .ok { color:var(--ok); font-weight:600; font-size:12px; letter-spacing:.06em; }
-  h1 { font-size:20px; line-height:1.25; margin:6px 0 4px; }
-  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 10px; font-weight:600; }
-  .meta, .muted { color:var(--muted); font-size:13px; }
-  .path { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; border-left:3px solid var(--hot);
-          background:rgba(247,185,85,.06); border-radius:4px; padding:6px 10px; margin-bottom:8px; word-break:break-word; }
-  textarea { width:100%; min-height:84px; resize:vertical; background:var(--bg); color:var(--text);
-             border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; }
-  button { font:inherit; font-weight:600; border:0; border-radius:8px; padding:11px 14px; cursor:pointer;
-           background:var(--hot); color:#1b1300; width:100%; margin-top:10px; }
-  button:disabled { opacity:.55; cursor:wait; }
-  .who { display:grid; gap:8px; }
-  .who button { background:var(--bg); color:var(--text); border:1px solid var(--line); margin:0; text-align:left; }
-  .chips span { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 9px;
-                margin:0 6px 6px 0; font-size:12px; }
-  a { color:var(--link); }
-  .src { margin-bottom:10px; font-size:13px; } .src div { color:var(--muted); white-space:pre-line; }
-  .break { border-left:3px solid var(--bad); background:rgba(255,123,114,.07); border-radius:4px; padding:8px 10px;
-           margin-bottom:8px; font-size:13px; }
-  .err { color:var(--bad); }
+  body { padding:16px 16px calc(32px + env(safe-area-inset-bottom)); max-width:560px; margin:0 auto; }
+  header { display:flex; align-items:center; gap:10px; font:800 20px var(--display); letter-spacing:-.02em; margin:4px 0 18px; }
+  header .dots { display:grid; grid-template-columns:repeat(2, 9px); gap:3px; }
+  header .dots i { width:9px; height:9px; border-radius:50%; border:1.5px solid var(--ink); }
+  header .dots i:nth-child(1) { background:var(--coral); } header .dots i:nth-child(2) { background:var(--sun); }
+  header .dots i:nth-child(3) { background:var(--mint); } header .dots i:nth-child(4) { background:var(--sky); }
+  header #me { font:600 14px var(--body); color:var(--muted); letter-spacing:0; }
+  .card { margin-bottom:16px; }
+  .ok { display:inline-flex; align-items:center; gap:8px; font:800 14px var(--display); background:var(--mint); border:2px solid var(--ink);
+        border-radius:999px; padding:3px 12px; }
+  .tapcard h1 { font-size:26px; margin:12px 0 4px; }
+  .meta { color:var(--muted); font-size:15px; margin:0; }
+  .path { font-family:var(--mono); font-size:13px; border-left:4px solid var(--brain); background:var(--brain-soft); border-radius:6px;
+          padding:8px 12px; margin-top:10px; word-break:break-word; }
+  .who { display:grid; gap:10px; margin-top:12px; }
+  .who .btn { justify-content:flex-start; width:100%; }
+  button.btn.full { width:100%; margin-top:12px; }
+  .src { margin-top:12px; font-size:14px; } .src div { color:var(--muted); white-space:pre-line; }
+  .break { border:2px solid var(--bad); background:#FFE9E6; border-radius:10px; padding:10px 12px; margin-top:10px; font-size:14px; }
+  .chips { margin-top:10px; }
 </style>
 </head>
 <body>
-<header><span class="dot"></span><b>Crew</b><span id="me"></span></header>
-<main id="app"><div class="muted">Reading tag…</div></main>
+<header><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Crew <span id="me"></span></header>
+<main id="app" aria-live="polite"><p class="meta">Reading the sticker…</p></main>
 <script>
 const params = new URLSearchParams(location.search);
 const sid = params.get("s") || "";
 const store = {
   get() { try { return localStorage.getItem("crew.handle") || ""; } catch { return ""; } },
   set(v) { try { localStorage.setItem("crew.handle", v); } catch {} },
+  clear() { try { localStorage.removeItem("crew.handle"); } catch {} },
 };
 let handle = params.get("h") || store.get();
 const app = document.getElementById("app");
@@ -55,65 +48,72 @@ async function post(url, body) {
   const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(body) });
   return r.json();
 }
+const fail = msg => `<div class="card"><p class="err" role="alert">${esc(msg)}</p></div>`;
 
 async function pickWho() {
-  const { people } = await (await fetch("/api/doors")).json();
-  app.innerHTML = `<div class="card"><h2>Who are you?</h2>
-    <div class="who">${people.map(p => `<button data-h="${esc(p)}">${esc(p)}</button>`).join("")}</div>
-    <p class="meta">Asked once on this phone.</p></div>`;
+  let people = [];
+  try { people = (await (await fetch("/api/doors")).json()).people || []; } catch { app.innerHTML = fail("Can't reach Crew. Check your connection and scan again."); return; }
+  app.innerHTML = people.length
+    ? `<div class="card"><h1 style="font-size:24px">Who's tapping?</h1><p class="meta">Pick your name. This phone will remember it.</p>
+        <div class="who">${people.map(p => `<button class="btn ghost" type="button" data-h="${esc(p)}">${esc(p)}</button>`).join("")}</div></div>`
+    : fail("Nobody is on the team yet. Ask your team lead to connect the team in Crew first.");
   app.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { handle = b.dataset.h; checkIn(); });
 }
 
 async function checkIn() {
-  if (!sid) { app.innerHTML = `<div class="card err">This tag has no session on it.</div>`; return; }
+  if (!sid) { app.innerHTML = fail("This sticker has no session on it. Ask an organizer to reprint it."); return; }
   if (!handle) return pickWho();
   store.set(handle);
-  document.getElementById("me").textContent = "· " + handle;
-  const r = await post("/api/tap", { handle, session: sid });
-  if (r.error) { app.innerHTML = `<div class="card err">${esc(r.error)}</div>`; return; }
+  document.getElementById("me").textContent = handle;
+  let r;
+  try { r = await post("/api/tap", { handle, session: sid }); } catch { app.innerHTML = fail("Can't reach Crew. Check your connection and tap again."); return; }
+  if (r.error) { app.innerHTML = fail(r.error) + `<button class="btn ghost full" type="button" id="notme">Not ${esc(handle)}? Switch name</button>`;
+    document.getElementById("notme").onclick = () => { store.clear(); handle = ""; checkIn(); }; return; }
   const s = r.session;
-  const plan = r.assigned_to === handle ? "On your plan."
-    : r.assigned_to ? `On ${esc(r.assigned_to)}'s plan, so you're extra coverage.`
-    : "Nobody was assigned. You just closed a blind spot.";
+  const plan = r.assigned_to === handle ? "This session is on your plan."
+    : r.assigned_to ? `This one is on ${esc(r.assigned_to)}'s plan, so you're extra coverage.`
+    : "Nobody was assigned to this one. You just closed a blind spot.";
   app.innerHTML = `
-    <div class="card"><div class="ok">✓ CHECKED IN</div><h1>${esc(s.title)}</h1>
-      <div class="meta">${esc([s.start && s.start.replace("T", " "), s.room].filter(Boolean).join(" · "))}</div>
-      <p class="meta">${plan}</p></div>
-    <div class="card"><h2>Why this matters to you</h2>
+    <div class="card pop tapcard"><span class="ok">✓ Checked in</span><h1>${esc(s.title)}</h1>
+      <p class="meta">${esc([s.start && s.start.replace("T", " "), s.room].filter(Boolean).join(" · "))}</p>
+      <p class="meta" style="margin-top:8px;color:var(--ink)">${plan}</p></div>
+    <div class="card"><h3>Why this matters to you</h3>
       ${r.why.length ? r.why.map(t => `<div class="path">${esc(t)}</div>`).join("")
-                     : `<div class="muted">Nothing in your code or goals connects to it.</div>`}</div>
-    <div class="card"><h2>One line from the room</h2>
-      <textarea id="note" placeholder="e.g. fastmcp 3 drops SSE, migrate to streamable http"></textarea>
-      <button id="send">Save to team brain</button><div id="out"></div></div>`;
+                     : `<p class="meta" style="margin-top:8px">Nothing in your code or goals connects to it. Listen for what your teammates might want.</p>`}</div>
+    <div class="card"><label for="note"><h3>Share one line from the room</h3></label>
+      <textarea id="note" placeholder="e.g. fastmcp 3 drops SSE, migrate to streamable http" style="margin-top:10px"></textarea>
+      <button class="btn full" id="send" type="button">Save to team brain</button><div id="out" aria-live="polite"></div></div>
+    <p class="meta" style="text-align:center"><button class="link-btn" type="button" id="notme">Not ${esc(handle)}? Switch name</button></p>`;
   document.getElementById("send").onclick = sendNote;
+  document.getElementById("notme").onclick = () => { store.clear(); handle = ""; document.getElementById("me").textContent = ""; checkIn(); };
 }
 
 async function sendNote() {
   const text = document.getElementById("note").value.trim();
   const out = document.getElementById("out"), btn = document.getElementById("send");
-  if (!text) return;
-  btn.disabled = true; btn.textContent = "Fetching sources…";
+  if (!text) { out.innerHTML = `<p class="err" role="alert" style="margin-top:10px">Type one line first.</p>`; return; }
+  btn.disabled = true; btn.textContent = "Fetching sources…"; out.innerHTML = "";
   try {
     const r = await post("/api/note", { handle, text, session: sid });
-    if (r.error) { out.innerHTML = `<p class="err">${esc(r.error)}</p>`; return; }
+    if (r.error) { out.innerHTML = `<p class="err" role="alert" style="margin-top:10px">${esc(r.error)}</p>`; return; }
     out.innerHTML = renderNote(r);
     document.getElementById("note").value = "";
   } catch (e) {
-    out.innerHTML = `<p class="err">Couldn't reach Crew.</p>`;
+    out.innerHTML = `<p class="err" role="alert" style="margin-top:10px">Couldn't reach Crew. Your note is still in the box, so try again.</p>`;
   } finally {
     btn.disabled = false; btn.textContent = "Save to team brain";
   }
 }
 
 function renderNote(r) {
-  const chips = [...r.packages, ...r.topics].map(x => `<span>${esc(x)}</span>`).join("");
+  const chips = [...r.packages, ...r.topics].map(x => `<span class="chip">${esc(x)}</span>`).join("");
   const breaks = r.breaking_changes.map(b => `<div class="break"><b>Breaking: ${esc(b.package)}</b> ${esc(b.summary)}<br>${
     b.affected.length ? b.affected.map(a => `${esc(a.owner)}: ${a.repos.map(esc).join(", ")}`).join("<br>")
                       : "No repo of ours depends on it."}</div>`).join("");
   const sources = r.sources.filter(s => s && !s.error).map(s => `<div class="src">
     <a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener">${esc(s.title)}</a><div>${esc(s.summary)}</div></div>`).join("");
-  return `<h2 style="margin-top:16px">Saved</h2><div class="chips">${chips}</div>${breaks}${
-    sources || `<p class="muted">No sources found.</p>`}`;
+  return `<h3 style="margin-top:18px">Saved to the team brain</h3><div class="chips">${chips}</div>${breaks}${
+    sources || `<p class="meta" style="margin-top:8px">No sources found for this one.</p>`}`;
 }
 
 checkIn();
