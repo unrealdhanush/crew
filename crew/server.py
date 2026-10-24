@@ -183,7 +183,12 @@ async def api_graph(request: Request):
         for n in (a, b):
             nodes.setdefault(n.id, G.node_json(n))
         edges.append(G.edge_json(e))
-    return JSONResponse({"nodes": list(nodes.values()), "edges": edges})
+    total = {"nodes": len(nodes), "edges": len(edges)}
+    shown_nodes, shown_edges = list(nodes.values()), edges
+    if request.query_params.get("focus", "1") != "0":  # default: bridges only, plus whatever is highlighted
+        pinned = {n["id"] for p in G.read_highlight()["paths"] for n in p["nodes"]}
+        shown_nodes, shown_edges = G.focus(shown_nodes, shown_edges, pinned)
+    return JSONResponse({"nodes": shown_nodes, "edges": shown_edges, "total": total})
 
 
 @mcp.custom_route("/api/highlight", methods=["GET"])

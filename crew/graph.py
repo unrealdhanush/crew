@@ -136,6 +136,35 @@ def path_json(path) -> dict:
     return {"nodes": nodes, "edges": edges, "text": path_text(nodes, edges)}
 
 
+TEAM_SIDE = {"Person", "Repo", "Note"}
+
+
+def focus(nodes: list[dict], edges: list[dict], pinned: set | None = None) -> tuple[list[dict], list[dict]]:
+    """The part of the graph that tells the story: people, repos and notes; the packages and topics that connect the
+    team's side to a session (bridges); the sessions those bridges, people or notes reach; and the sources notes cite.
+    Dead-end dependencies, one-sided topics, speakers and agenda pages are dropped. `pinned` ids (the current
+    highlight) always stay."""
+    pinned = pinned or set()
+    label = {n["id"]: n["label"] for n in nodes}
+    near: dict = {}
+    for e in edges:
+        near.setdefault(e["src"], set()).add(e["dst"])
+        near.setdefault(e["dst"], set()).add(e["src"])
+
+    def sides(node_id):
+        return {label.get(other) for other in near.get(node_id, ())}
+
+    team = {n["id"] for n in nodes if n["label"] in TEAM_SIDE}
+    bridges = {n["id"] for n in nodes
+               if n["label"] in ("Package", "Topic") and sides(n["id"]) & TEAM_SIDE and "Session" in sides(n["id"])}
+    sessions = {n["id"] for n in nodes if n["label"] == "Session" and near.get(n["id"], set()) & (team | bridges)}
+    notes = {i for i in team if label[i] == "Note"}
+    sources = {n["id"] for n in nodes if n["label"] == "Source" and near.get(n["id"], set()) & notes}
+    keep = team | bridges | sessions | sources | (pinned & set(label))
+    return ([n for n in nodes if n["id"] in keep],
+            [e for e in edges if e["src"] in keep and e["dst"] in keep])
+
+
 def highlight(title: str, paths: list[dict]) -> None:
     """Tell the graph viewer which paths to light up."""
     payload = {"title": title, "paths": paths, "at": time.time()}

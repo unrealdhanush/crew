@@ -21,6 +21,9 @@
   .legend { display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:22px; color:var(--muted); font-size:12px; }
   .legend i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
   #stats { color:var(--muted); font-size:12px; margin-top:12px; }
+  .toggle { margin-top:10px; font:500 12px/1 inherit; color:var(--text); background:none; cursor:pointer;
+            border:1px solid var(--line); border-radius:6px; padding:6px 9px; }
+  .toggle:hover { border-color:var(--hot); }
   @media (max-width: 800px) { body { grid-template-columns:1fr; grid-template-rows: 60vh auto; } #net { height:60vh; } }
 </style>
 </head>
@@ -33,6 +36,7 @@
   <div id="paths"><div class="empty">Ask Crew something to light up a path.</div></div>
   <div class="legend" id="legend"></div>
   <div id="stats"></div>
+  <button id="focus" class="toggle" type="button"></button>
 </aside>
 <script>
 const COLORS = { Person:"#f7b955", Repo:"#58a6ff", Package:"#3fb950", Topic:"#a371f7", Session:"#ff7b72",
@@ -69,8 +73,19 @@ function render() {
   nodes.update(raw.nodes.map(styleNode));
   edges.update(raw.edges.map(styleEdge));
 }
+// Focus mode (default) shows bridges only: what connects the team's code to the conference.
+let focusMode = true;
+try { focusMode = localStorage.getItem("crew.viz.focus") !== "0"; } catch (e) {}
+const focusBtn = document.getElementById("focus");
+function paintFocus() { focusBtn.textContent = focusMode ? "Showing bridges only · show everything" : "Showing everything · bridges only"; }
+focusBtn.onclick = () => {
+  focusMode = !focusMode; paintFocus(); graphSig = "";
+  try { localStorage.setItem("crew.viz.focus", focusMode ? "1" : "0"); } catch (e) {}
+  loadGraph();
+};
+paintFocus();
 async function loadGraph() {
-  const g = await (await fetch("/api/graph")).json();
+  const g = await (await fetch(`/api/graph?focus=${focusMode ? 1 : 0}`)).json();
   const sig = g.nodes.length + ":" + g.edges.length;
   if (sig === graphSig) return;
   graphSig = sig; raw = g;
@@ -78,7 +93,9 @@ async function loadGraph() {
   nodes.remove(nodes.getIds().filter(id => !ids.has(id)));
   edges.remove(edges.getIds().filter(id => !eids.has(id)));
   render();
-  document.getElementById("stats").textContent = `${g.nodes.length} nodes · ${g.edges.length} edges`;
+  document.getElementById("stats").textContent = g.total && g.total.nodes !== g.nodes.length
+    ? `${g.nodes.length} of ${g.total.nodes} nodes · ${g.edges.length} edges`
+    : `${g.nodes.length} nodes · ${g.edges.length} edges`;
 }
 async function loadHighlight() {
   const h = await (await fetch("/api/highlight")).json();

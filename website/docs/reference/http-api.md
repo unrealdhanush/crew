@@ -20,7 +20,7 @@ None of these endpoints check who's calling, including `/api/reset`, which delet
 | `/organizer` | Publish the agenda |
 | `/stickers` | Printable NFC/QR door stickers |
 | `/team` | Team onboarding and live build |
-| `/viz` | Live graph view; highlights the latest answer's paths |
+| `/viz` | Live graph view; highlights the latest answer's paths. Shows bridges only by default, with a toggle for everything |
 | `/tap?s=<session id>` | What a door sticker opens: check-in and note |
 | `/sim` | Tap simulator for demos |
 
@@ -28,7 +28,7 @@ None of these endpoints check who's calling, including `/api/reset`, which delet
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/graph` | Up to 2,000 edges with their nodes, for the viewer |
+| GET | `/api/graph?focus=1` | Edges and nodes for the viewer (up to 2,000 edges), plus `total` counts. By default (`focus=1`) only bridges are kept: people, repos, notes, the packages and topics linking them to sessions, those sessions, and the sources notes cite; the current highlight always stays. `focus=0` returns everything |
 | GET | `/api/highlight` | The paths behind the latest answer: `{title, paths, at}` |
 | GET | `/api/stats` | Counts: `persons`, `repos`, `packages`, `sessions`, `notes`, `bridges` |
 | GET | `/api/setup` | Saved `team`, `event`, and the `github` API address in use |
