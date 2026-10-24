@@ -520,17 +520,19 @@ def write_sessions(sessions: list[dict], source_url: str, fetched_at: str, progr
 
 
 def ingest_agenda(urls: list[str], fresh: bool = False, progress=_quiet) -> dict:
-    """Scrape agenda pages live with Bright Data, extract sessions, write them to the graph."""
-    total, details = 0, []
+    """Scrape agenda pages live with Bright Data, extract sessions, write them to the graph.
+    `sessions` counts distinct sessions: pages that list the same session are merged into one graph node."""
+    sids, details = set(), []
     for url in urls:
         progress(f"Scraping {url} with Bright Data")
         page = web.fetch_markdown(url, fresh=fresh)
         progress(f"Got {len(page['markdown']):,} characters{' (cached)' if page['cached'] else ''}. Extracting sessions")
         sessions = extract_sessions(page["markdown"])
-        total += write_sessions(sessions, url, page["fetched_at"], progress)
+        write_sessions(sessions, url, page["fetched_at"], progress)
+        sids |= {s.get("sid") or slug(s["title"]) for s in sessions}
         progress(f"{len(sessions)} sessions from {url}")
         details.append({"url": url, "sessions": len(sessions), "cached": page["cached"], "fetched_at": page["fetched_at"]})
-    return {"sessions": total, "pages": details}
+    return {"sessions": len(sids), "pages": details}
 
 
 def ingest_agenda_file(path: str | Path, progress=_quiet) -> dict:
