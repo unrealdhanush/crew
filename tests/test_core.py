@@ -126,6 +126,8 @@ class IngestTests(unittest.TestCase):
             result = ingest.ingest_agenda(["a", "b"])
         self.assertEqual(result["sessions"], 2)  # not 3: "Shared talk" is one graph node
         self.assertEqual([p["sessions"] for p in result["pages"]], [2, 1])
+        self.assertEqual({ingest.session_id({"sid": 1, "title": "x"}), ingest.session_id({"sid": True, "title": "y"})},
+                         {"1", "True"})  # same key the graph uses, so 1 and True stay two sessions
 
     def test_minutes(self):
         a, b = to_minutes("2026-10-28T10:30"), to_minutes("2026-10-28T11:10")
