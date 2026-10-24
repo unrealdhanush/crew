@@ -1,0 +1,62 @@
+# Render blueprint: New > Blueprint > pick this repo. Not yet applied on Render.
+# Crew is protected by CREW_ACCESS_TOKEN (generated below): open the app once as https://<crew>/?token=<token>,
+# and give TrueForge the header "Authorization: Bearer <token>". Find the token in the crew service's Environment.
+services:
+  # Documentation (Docusaurus), free static site
+  - type: web
+    name: crew-docs
+    runtime: static
+    buildCommand: cd website && npm ci && npm run build
+    staticPublishPath: website/build
+    envVars:
+      - key: DOCS_URL          # canonical links; change if Render gives the site a different address
+        value: https://crew-docs.onrender.com
+
+  # Crew server: web app, graph view and MCP endpoint (/mcp). Builds from the repo's Dockerfile.
+  - type: web
+    name: crew
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: 0.5c-512mb         # free instances sleep after ~15 min idle; too slow to wake mid-demo
+    healthCheckPath: /api/health  # 503 when FalkorDB is unreachable
+    disk:                    # team.json, event.json and digests survive redeploys
+      name: crew-state
+      mountPath: /app/state
+      sizeGB: 1
+    envVars:
+      - key: CREW_ACCESS_TOKEN
+        generateValue: true
+      - key: CREW_DATA_DIR
+        value: /app/state
+      - key: CREW_PORT
+        value: "10000"       # Render's default port
+      - key: PORT
+        value: "10000"
+      - key: FALKORDB_HOST
+        fromService: {type: pserv, name: crew-falkordb, property: host}
+      - key: FALKORDB_PORT
+        value: "6379"
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: BRIGHTDATA_UNLOCKER_ZONE
+        value: web_unlocker1
+      - key: BRIGHTDATA_SERP_ZONE
+        value: serp_api1
+      - key: OPENAI_API_KEY      # secrets: entered in Render when the blueprint is applied
+        sync: false
+      - key: BRIGHTDATA_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+
+  # FalkorDB with a persistent disk, reachable only from the Crew service
+  - type: pserv
+    name: crew-falkordb
+    runtime: image
+    image:
+      url: docker.io/falkordb/falkordb:latest
+    plan: 0.5c-512mb
+    disk:
+      name: falkordb-data
+      mountPath: /var/lib/falkordb/data
+      sizeGB: 1

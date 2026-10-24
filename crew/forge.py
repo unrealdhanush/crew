@@ -53,25 +53,38 @@ def _spec(instructions: str, tools: list[str] | None = None) -> dict:
     }
 
 
-def agent_specs() -> dict[str, tuple[str, dict]]:
+def team_people(server: str = "") -> list[tuple[str, str]]:
+    """(handle, name) for each teammate: from a deployed Crew server's /api/doors, else the local graph."""
+    if not server:
+        return G.rows("MATCH (p:Person) RETURN p.handle, p.name ORDER BY p.handle")
+    import httpx
+
+    headers = {"Authorization": f"Bearer {config.ACCESS_TOKEN}"} if config.ACCESS_TOKEN else {}
+    resp = httpx.get(f"{server.rstrip('/')}/api/doors", headers=headers, timeout=30)
+    resp.raise_for_status()
+    data = resp.json()
+    return [(handle, data.get("names", {}).get(handle) or handle) for handle in data["people"]]
+
+
+def agent_specs(server: str = "") -> dict[str, tuple[str, dict]]:
     """name -> (description, spec) for every agent Crew needs."""
     template = (PROMPTS / "agent.md").read_text().split("---", 1)[-1].strip()
     specs = {"crew-scout": ("Reads the team's READMEs and goals and maps them onto the agenda",
                             _spec((PROMPTS / "scout.md").read_text().split("---", 1)[-1].strip(), SCOUT_TOOLS))}
-    for handle, name in G.rows("MATCH (p:Person) RETURN p.handle, p.name ORDER BY p.handle"):
+    for handle, name in team_people(server):
         text = template.replace("{{HANDLE}}", handle).replace("{{NAME}}", name or handle)
         specs[f"crew-{handle}"] = (f"Crew conference agent for {name or handle}", _spec(text))
     return specs
 
 
-def setup() -> dict:
+def setup(server: str = "") -> dict:
     """Create or update Crew's agents in TrueForge. Safe to re-run after the team changes."""
     from trueforge_sdk.types.agent_spec import AgentSpec
 
     tf = client()
     existing = {a.name: a.id for a in tf.agents.list(limit=100)}  # API max; the pager fetches more
     done = []
-    for name, (description, spec) in agent_specs().items():
+    for name, (description, spec) in agent_specs(server).items():
         manifest = AgentSpec.model_validate(spec)
         if name in existing:
             tf.agents.update(agent_id=existing[name], manifest=manifest, description=description)

@@ -9,7 +9,7 @@ const config = {
   title: 'Crew',
   tagline: 'Send four people to a conference, bring back one brain.',
   favicon: 'img/logo.svg',
-  url: 'http://localhost',
+  url: process.env.DOCS_URL || 'http://localhost',  // set DOCS_URL when publishing
   baseUrl: '/',
   onBrokenLinks: 'throw',
   markdown: {

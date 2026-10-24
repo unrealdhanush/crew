@@ -14,6 +14,8 @@ when installed as a CLI). Real environment variables win over `.env`.
 | `CREW_HOST` | `127.0.0.1` | Address to listen on. Use `0.0.0.0` so phones on the network can reach `/tap` |
 | `CREW_PORT` | `8765` | Port |
 | `CREW_HOME` | repo checkout, else `~/.crew` | Folder holding `.env`, `data/` and `.cache/` |
+| `CREW_ACCESS_TOKEN` | (none) | If set, every request needs it: `Authorization: Bearer <token>`, or open a page once with `?token=<token>` (sets a cookie). `/api/health` stays open |
+| `CREW_DATA_DIR` | `$CREW_HOME/data` | Where `team.json`, `event.json` and digests are kept (point it at a persistent disk when deployed) |
 | `CREW_BUILD_PACE` | `0.4` | Seconds between build steps so the graph visibly grows; `0` for full speed |
 
 ## Graph

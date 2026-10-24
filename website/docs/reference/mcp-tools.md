@@ -44,5 +44,5 @@ The **label** is the MCP annotation TrueForge uses for approvals: read-only tool
 | Tool | Label | Arguments | Returns |
 |---|---|---|---|
 | `ingest_agenda` | write | `urls[]`, `fresh?` | Sessions loaded per page |
-| `ingest_team` | write | `team_file?` (default `data/team.json`) | Members, repos and packages loaded |
+| `ingest_team` | write | `team_file?` (default: the saved team in `CREW_DATA_DIR`) | Members, repos and packages loaded |
 | `graph_query` | read-only | `cypher` | Rows from a read-only Cypher query (writes are rejected) |

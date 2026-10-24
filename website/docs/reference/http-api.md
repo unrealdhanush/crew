@@ -7,9 +7,9 @@ description: The web pages and JSON endpoints served by crew serve.
 All on the same server as the MCP endpoint (default `http://127.0.0.1:8765`). Responses are JSON; errors are
 `{"error": "..."}`.
 
-:::danger No authentication
-None of these endpoints check who's calling, including `/api/reset`, which deletes the graph. Keep Crew on
-`127.0.0.1` unless you're on a network you trust.
+:::danger Set an access token before exposing Crew
+Without `CREW_ACCESS_TOKEN`, none of these endpoints check who's calling, including `/api/reset`, which deletes the
+graph. Keep Crew on `127.0.0.1` unless it's set (see [Configuration](./configuration.md)).
 :::
 
 ## Pages
@@ -30,6 +30,7 @@ None of these endpoints check who's calling, including `/api/reset`, which delet
 |---|---|---|
 | GET | `/api/graph?focus=1` | Edges and nodes for the viewer (up to 2,000 edges), plus `total` counts. By default (`focus=1`) only bridges are kept: people, repos, notes, the packages and topics linking them to sessions, those sessions, and the sources notes cite; the current highlight always stays. `focus=0` returns everything |
 | GET | `/api/highlight` | The paths behind the latest answer: `{title, paths, at}` |
+| GET | `/api/health` | `{"ok": true}`, or 503 when FalkorDB is unreachable. Open even with `CREW_ACCESS_TOKEN` set |
 | GET | `/api/stats` | Counts: `persons`, `repos`, `packages`, `sessions`, `notes`, `bridges` |
 | GET | `/api/setup` | Saved `team`, `event`, and the `github` API address in use |
 | GET | `/api/doors` | People and sessions, for the tap pages and stickers |
