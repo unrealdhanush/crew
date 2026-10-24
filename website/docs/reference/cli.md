@@ -53,5 +53,5 @@ These read and write the graph directly, so FalkorDB must be reachable.
 | `crew note <handle> "<text>" [--session S]` | Save a note |
 | `crew ask "<question>"` | Answer from the team's notes, with citations |
 | `crew digest` | Draft the team digest (doesn't send it) |
-| `crew forge-setup` | Create or update Crew's agents in TrueForge |
+| `crew forge-setup [--server URL]` | Create or update Crew's agents in TrueForge (`--server`: read the team from a deployed Crew) |
 | `crew scout [--direct]` | Run Crew Scout in TrueForge (`--direct`: call OpenAI instead) |

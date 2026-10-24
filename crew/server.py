@@ -2,14 +2,17 @@
 
 Run:  python -m crew.server      ->  MCP at http://127.0.0.1:8765/mcp, viewer at http://127.0.0.1:8765/viz
 """
+import hmac
 import json
 import traceback
+import urllib.parse
 from pathlib import Path
 
 from fastmcp import FastMCP
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
-from starlette.responses import FileResponse, JSONResponse, Response
+from starlette.middleware import Middleware
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 from . import build, config, digest, ingest, memory, notes, planner, queries, scout, tap
 from . import graph as G
@@ -172,6 +175,42 @@ async def static(request: Request):
     return FileResponse(WEB_DIR / name, media_type=ASSETS[name])
 
 
+class TokenGate:
+    """With CREW_ACCESS_TOKEN set, every request needs the token: `Authorization: Bearer <token>` (TrueForge, CLI),
+    or a cookie set by opening any page once with `?token=<token>` (browsers, phones). /api/health stays open."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or not config.ACCESS_TOKEN or scope["path"] == "/api/health":
+            return await self.app(scope, receive, send)
+        request = Request(scope)
+        from_query = request.query_params.get("token", "")
+        bearer = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+        given = from_query or bearer or request.cookies.get("crew_token", "")
+        if not hmac.compare_digest(given.encode(), config.ACCESS_TOKEN.encode()):
+            return await Response("Crew needs its access token: open this page once with ?token=<token>.",
+                                  status_code=401)(scope, receive, send)
+        if from_query:  # remember it, and take it out of the address bar
+            rest = urllib.parse.urlencode([(k, v) for k, v in request.query_params.multi_items() if k != "token"])
+            response = RedirectResponse(scope["path"] + (f"?{rest}" if rest else ""), status_code=303)
+            response.set_cookie("crew_token", config.ACCESS_TOKEN, httponly=True, samesite="lax",
+                                secure=request.url.scheme == "https", max_age=30 * 86400)
+            return await response(scope, receive, send)
+        return await self.app(scope, receive, send)
+
+
+@mcp.custom_route("/api/health", methods=["GET"])
+async def api_health(request: Request):
+    """For load balancers: 200 only if the graph answers."""
+    try:
+        await run_in_threadpool(G.rows, "RETURN 1")
+        return JSONResponse({"ok": True})
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": type(exc).__name__}, status_code=503)
+
+
 def _json(data: dict) -> Response:
     return Response(json.dumps(data, default=str), media_type="application/json")
 
@@ -295,7 +334,7 @@ def main() -> None:
     print(f"Crew app:    http://{config.MCP_HOST}:{config.MCP_PORT}/")
     print(f"Graph view:  http://{config.MCP_HOST}:{config.MCP_PORT}/viz")
     print(f"Tap demo:    http://{config.MCP_HOST}:{config.MCP_PORT}/sim")
-    mcp.run(transport="http", host=config.MCP_HOST, port=config.MCP_PORT)
+    mcp.run(transport="http", host=config.MCP_HOST, port=config.MCP_PORT, middleware=[Middleware(TokenGate)])
 
 
 if __name__ == "__main__":

@@ -20,7 +20,8 @@ def _load_dotenv(path: Path) -> None:
 
 _load_dotenv(ROOT / ".env")
 
-DATA_DIR = ROOT / "data"
+DATA_DIR = Path(os.getenv("CREW_DATA_DIR") or ROOT / "data")  # team.json, event.json, digests
+SAMPLE_AGENDA = ROOT / "data" / "agenda.sample.json"  # shipped with the code, not runtime state
 CACHE_DIR = ROOT / ".cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 HIGHLIGHT_FILE = CACHE_DIR / "highlight.json"
@@ -45,5 +46,7 @@ SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL", "")
 
 MCP_HOST = os.getenv("CREW_HOST", "127.0.0.1")
 MCP_PORT = int(os.getenv("CREW_PORT", "8765"))
+# If set, every request needs this token (browser: open /?token=... once; API/MCP: Authorization: Bearer ...).
+ACCESS_TOKEN = os.getenv("CREW_ACCESS_TOKEN", "")
 # Where the CLI on a teammate's machine finds the team's Crew server.
 CREW_SERVER = (os.getenv("CREW_SERVER") or f"http://{MCP_HOST}:{MCP_PORT}").rstrip("/")

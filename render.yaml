@@ -1,6 +1,6 @@
-# Render blueprint: New > Blueprint > pick this repo. Not yet deployed or tested on Render.
-# Crew has no login yet: anyone with the app URL can run builds (spending your API credits) or clear the graph.
-# Add authentication before sharing the app URL. The docs site is safe to make public.
+# Render blueprint: New > Blueprint > pick this repo. Not yet applied on Render.
+# Crew is protected by CREW_ACCESS_TOKEN (generated below): open the app once as https://<crew>/?token=<token>,
+# and give TrueForge the header "Authorization: Bearer <token>". Find the token in the crew service's Environment.
 services:
   # Documentation (Docusaurus), free static site
   - type: web
@@ -8,15 +8,26 @@ services:
     runtime: static
     buildCommand: cd website && npm ci && npm run build
     staticPublishPath: website/build
+    envVars:
+      - key: DOCS_URL          # canonical links; change if Render gives the site a different address
+        value: https://crew-docs.onrender.com
 
   # Crew server: web app, graph view and MCP endpoint (/mcp). Builds from the repo's Dockerfile.
   - type: web
     name: crew
     runtime: docker
     dockerfilePath: ./Dockerfile
-    plan: starter            # free instances sleep after ~15 min idle; too slow to wake mid-demo
-    healthCheckPath: /api/stats
+    plan: 0.5c-512mb         # free instances sleep after ~15 min idle; too slow to wake mid-demo
+    healthCheckPath: /api/health  # 503 when FalkorDB is unreachable
+    disk:                    # team.json, event.json and digests survive redeploys
+      name: crew-state
+      mountPath: /app/state
+      sizeGB: 1
     envVars:
+      - key: CREW_ACCESS_TOKEN
+        generateValue: true
+      - key: CREW_DATA_DIR
+        value: /app/state
       - key: CREW_PORT
         value: "10000"       # Render's default port
       - key: PORT
@@ -44,7 +55,7 @@ services:
     runtime: image
     image:
       url: docker.io/falkordb/falkordb:latest
-    plan: starter
+    plan: 0.5c-512mb
     disk:
       name: falkordb-data
       mountPath: /var/lib/falkordb/data

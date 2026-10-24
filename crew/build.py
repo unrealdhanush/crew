@@ -10,7 +10,7 @@ from . import graph as G
 
 TEAM_FILE = config.DATA_DIR / "team.json"
 EVENT_FILE = config.DATA_DIR / "event.json"
-SAMPLE_AGENDA = config.DATA_DIR / "agenda.sample.json"
+SAMPLE_AGENDA = config.SAMPLE_AGENDA
 # Pause after each step so the graph visibly grows on stage. Set CREW_BUILD_PACE=0 for full speed.
 PACE = float(os.getenv("CREW_BUILD_PACE", "0.4"))
 

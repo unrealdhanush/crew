@@ -66,7 +66,7 @@ def main() -> None:
     sub.add_parser("ask").add_argument("question")
     sub.add_parser("digest")
     sub.add_parser("serve")
-    sub.add_parser("forge-setup")
+    sub.add_parser("forge-setup").add_argument("--server", default="", help="a deployed Crew to read the team from")
     sub.add_parser("scout").add_argument("--direct", action="store_true", help="skip TrueForge, call OpenAI directly")
     sub.add_parser("open").add_argument("--server", default=config.CREW_SERVER)
     s = sub.add_parser("scan")
@@ -86,7 +86,7 @@ def main() -> None:
 
         webbrowser.open(args.server + "/")
         return print(f"Opened {args.server}/")
-    if args.cmd != "scan":  # scan runs on a teammate's machine and only talks to the Crew server
+    if args.cmd not in ("scan",) and not (args.cmd == "forge-setup" and args.server):  # these only talk to a server
         G.init_schema()
     result = {
         "init": lambda: {"ok": True},
@@ -102,7 +102,7 @@ def main() -> None:
         "ask": lambda: memory.ask_team(args.question),
         "digest": digest.draft_digest,
         "scan": lambda: scan(args),
-        "forge-setup": forge.setup,
+        "forge-setup": lambda: forge.setup(args.server),
         "scout": lambda: scout.auto_tag(print_progress) if args.direct else forge.run_scout(print_progress),
     }[args.cmd]()
     print(json.dumps(result, indent=2, default=str))
