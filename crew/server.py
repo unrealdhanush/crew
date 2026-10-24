@@ -154,7 +154,7 @@ PAGES = {
     "/tap": "tap.html",              # what a door sticker opens
     "/sim": "sim.html",              # on-stage tap simulator
 }
-ASSETS = {"crew.css": "text/css", "crew.js": "text/javascript"}
+ASSETS = {"crew.css": "text/css", "crew.js": "text/javascript", "tour.js": "text/javascript"}
 
 
 def _page(filename: str):
