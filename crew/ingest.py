@@ -464,13 +464,18 @@ def to_minutes(value: str | None) -> int | None:
     return int(dt.replace(tzinfo=None).timestamp() // 60)
 
 
+def session_id(session: dict) -> str:
+    """The graph key for a session: its given sid as a string, else a slug of its title."""
+    return str(session.get("sid") or slug(session["title"]))
+
+
 def write_sessions(sessions: list[dict], source_url: str, fetched_at: str, progress=_quiet) -> int:
     G.q(
         "MERGE (src:Source {url: $url}) SET src.fetched_at = $at, src.title = coalesce(src.title, $url)",
         {"url": source_url, "at": fetched_at},
     )
     for s in sessions:
-        sid = s.get("sid") or slug(s["title"])
+        sid = session_id(s)
         progress(f"Session: {s['title'].strip()}")
         G.q(
             "MERGE (s:Session {sid: $sid}) "
@@ -520,17 +525,19 @@ def write_sessions(sessions: list[dict], source_url: str, fetched_at: str, progr
 
 
 def ingest_agenda(urls: list[str], fresh: bool = False, progress=_quiet) -> dict:
-    """Scrape agenda pages live with Bright Data, extract sessions, write them to the graph."""
-    total, details = 0, []
+    """Scrape agenda pages live with Bright Data, extract sessions, write them to the graph.
+    `sessions` counts distinct sessions: pages that list the same session are merged into one graph node."""
+    sids, details = set(), []
     for url in urls:
         progress(f"Scraping {url} with Bright Data")
         page = web.fetch_markdown(url, fresh=fresh)
         progress(f"Got {len(page['markdown']):,} characters{' (cached)' if page['cached'] else ''}. Extracting sessions")
         sessions = extract_sessions(page["markdown"])
-        total += write_sessions(sessions, url, page["fetched_at"], progress)
+        write_sessions(sessions, url, page["fetched_at"], progress)
+        sids |= {session_id(s) for s in sessions}
         progress(f"{len(sessions)} sessions from {url}")
         details.append({"url": url, "sessions": len(sessions), "cached": page["cached"], "fetched_at": page["fetched_at"]})
-    return {"sessions": total, "pages": details}
+    return {"sessions": len(sids), "pages": details}
 
 
 def ingest_agenda_file(path: str | Path, progress=_quiet) -> dict:

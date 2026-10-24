@@ -27,6 +27,10 @@
       <button class="btn big" id="publish">Publish agenda</button>
       <button class="btn ghost" id="sample" title="Four made-up sessions, for offline testing">Use sample agenda</button>
     </div>
+    <div class="small muted">Fill in a known event:
+      <a href="#" id="universe26">GitHub Universe 2026</a> (its session catalog renders in the browser, so Crew reads the
+      published schedule posts instead)
+    </div>
     <div class="feed" id="feed"></div>
     <div id="out"></div>
   </section>
@@ -63,6 +67,14 @@ async function publish(sample) {
 }
 $("publish").onclick = () => publish(false);
 $("sample").onclick = () => publish(true);
+$("universe26").onclick = (e) => {
+  e.preventDefault();
+  $("name").value = "GitHub Universe 2026";
+  $("urls").value = [
+    "https://github.blog/news-insights/company-news/your-guide-to-github-universe-2026-is-here-the-schedule-just-launched/",
+    "https://github.blog/news-insights/company-news/10-technical-talks-im-excited-about-at-github-universe-2026/",
+  ].join("\n");
+};
 </script>
 </body>
 </html>

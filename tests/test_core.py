@@ -2,9 +2,11 @@
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from crew.forge import SCOUT_TOOLS, _spec, _tool_and_args
+from crew import ingest
 from crew.graph import display_name, path_text
 from crew.scout import valid_evidence
 from crew.ingest import (norm_pkg, norm_topic, parse_go_mod, parse_manifest, parse_package_json, parse_package_json_dev,
@@ -115,6 +117,17 @@ class IngestTests(unittest.TestCase):
         self.assertEqual((repo["deps"], repo["dev_deps"]), (["fastmcp", "react"], ["react"]))
         with self.assertRaises(ValueError):
             upload_repo("ann", {"name": "../etc", "deps": []})
+
+    def test_agenda_counts_distinct_sessions_across_pages(self):
+        pages = {"a": [{"title": "Shared talk"}, {"title": "Only on A"}], "b": [{"title": "Shared talk"}]}
+        with mock.patch("crew.ingest.web.fetch_markdown", side_effect=lambda u, fresh=False: {"markdown": u, "cached": False, "fetched_at": "t"}), \
+             mock.patch("crew.ingest.extract_sessions", side_effect=lambda md: pages[md]), \
+             mock.patch("crew.ingest.write_sessions", return_value=0):
+            result = ingest.ingest_agenda(["a", "b"])
+        self.assertEqual(result["sessions"], 2)  # not 3: "Shared talk" is one graph node
+        self.assertEqual([p["sessions"] for p in result["pages"]], [2, 1])
+        self.assertEqual({ingest.session_id({"sid": 1, "title": "x"}), ingest.session_id({"sid": True, "title": "y"})},
+                         {"1", "True"})  # same key the graph uses, so 1 and True stay two sessions
 
     def test_minutes(self):
         a, b = to_minutes("2026-10-28T10:30"), to_minutes("2026-10-28T11:10")
