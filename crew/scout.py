@@ -92,10 +92,39 @@ def _light_up(title: str, cypher: str, params: dict) -> list[str]:
     return [p["text"] for p in paths]
 
 
+_LIST_ITEM = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+
+
+def readme_sentences(readme: str) -> list[str]:
+    """The README's prose as normalized sentences, in order. Headings are left out; each paragraph and list item is
+    split at sentence ends, so evidence can only be whole sentences."""
+    blocks, current = [], []
+    for line in (readme or "").splitlines():
+        if not line.strip() or line.lstrip().startswith(("#", "```", "|", "<")) or _LIST_ITEM.match(line):
+            if current:
+                blocks.append(" ".join(current))
+                current = []
+            if _LIST_ITEM.match(line):
+                blocks.append(_LIST_ITEM.sub("", line))
+            continue
+        current.append(line.strip())
+    if current:
+        blocks.append(" ".join(current))
+    return [s for block in blocks for s in (_plain(x) for x in _SENTENCE_END.split(block)) if s]
+
+
 def valid_evidence(quote: str, readme: str) -> bool:
-    """A real sentence (5+ words, not just a heading) that appears in the README."""
+    """One or more whole, consecutive README sentences (5+ words in total), not a heading or a fragment."""
     plain = _plain(quote)
-    return 10 <= len(quote) <= 300 and len(plain.split()) >= 5 and plain in _plain(readme)
+    if not 10 <= len(quote) <= 300 or len(plain.split()) < 5:
+        return False
+    sentences = readme_sentences(readme)
+    for start in range(len(sentences)):
+        for end in range(start + 1, min(start + 4, len(sentences) + 1)):
+            if " ".join(sentences[start:end]) == plain:
+                return True
+    return False
 
 
 def tag_repo(full_name: str, topics: list[str], evidence: str) -> dict:
@@ -170,7 +199,7 @@ def auto_tag(progress=_quiet) -> dict:
         answer = llm.json_call(REPO_PROMPT, json.dumps(profile))
         result = tag_repo(row["repo"], answer.get("topics"), answer.get("evidence", ""))
         if result.get("error"):  # one retry with the reason, like the TrueForge agent is told to do
-            retry = dict(profile, previous_answer=answer, rejected_because=result["error"])
+            retry = dict(profile, rejected_because=result["error"])  # not the old answer: it may echo README text
             answer = llm.json_call(REPO_PROMPT, json.dumps(retry))
             result = tag_repo(row["repo"], answer.get("topics"), answer.get("evidence", ""))
         if result.get("error"):

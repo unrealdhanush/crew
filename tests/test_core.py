@@ -153,6 +153,12 @@ class SafetyAndTextTests(unittest.TestCase):
         self.assertTrue(valid_evidence("An MCP server for Washington Metro train times.", readme))
         self.assertFalse(valid_evidence("# wmata_mcp", readme))                       # heading
         self.assertFalse(valid_evidence("An MCP server for London buses.", readme))   # not in the README
+        long_heading = "# This project provides developer tools\n\nIt runs locally. It needs no account at all."
+        self.assertFalse(valid_evidence("This project provides developer tools", long_heading))  # 5-word heading
+        self.assertFalse(valid_evidence("needs no account at all", long_heading))                # fragment
+        self.assertTrue(valid_evidence("It needs no account at all.", long_heading))              # whole sentence
+        self.assertTrue(valid_evidence("It runs locally. It needs no account at all.", long_heading))  # consecutive
+        self.assertTrue(valid_evidence("Works with every MCP client today.", "- Works with every **MCP** client today."))
 
     def test_path_text(self):
         nodes = [{"id": 1, "name": "ann"}, {"id": 2, "name": "acme/api"}, {"id": 3, "name": "fastmcp"}]
