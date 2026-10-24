@@ -525,6 +525,22 @@ def write_sessions(sessions: list[dict], source_url: str, fetched_at: str, progr
     return len(sessions)
 
 
+def prune_sessions(url: str, keep: set[str]) -> int:
+    """Delete sessions this page used to list but no longer does, unless another page lists them or the team
+    has notes, check-ins or plans on them."""
+    rows = G.rows(
+        "MATCH (s:Session)-[:CITES]->(:Source {url: $url}) "
+        "OPTIONAL MATCH (s)-[:CITES]->(o:Source) WHERE o.url <> $url "
+        "OPTIONAL MATCH (s)<-[r:ABOUT|ATTENDED]-() "
+        "RETURN s.sid, count(DISTINCT o), count(DISTINCT r)",
+        {"url": url},
+    )
+    stale = [sid for sid, others, used in rows if sid not in keep and others == 0 and used == 0]
+    if stale:
+        G.q("MATCH (s:Session) WHERE s.sid IN $sids DETACH DELETE s", {"sids": stale})
+    return len(stale)
+
+
 def ingest_agenda(urls: list[str], fresh: bool = False, progress=_quiet) -> dict:
     """Scrape agenda pages live with Bright Data, extract sessions, write them to the graph.
     `sessions` counts distinct sessions: pages that list the same session are merged into one graph node."""
@@ -535,7 +551,11 @@ def ingest_agenda(urls: list[str], fresh: bool = False, progress=_quiet) -> dict
         progress(f"Got {len(page['markdown']):,} characters{' (cached)' if page['cached'] else ''}. Extracting sessions")
         sessions = extract_sessions(page["markdown"])
         write_sessions(sessions, url, page["fetched_at"], progress)
-        sids |= {session_id(s) for s in sessions}
+        page_sids = {session_id(s) for s in sessions}
+        sids |= page_sids
+        removed = prune_sessions(url, page_sids)
+        if removed:
+            progress(f"Removed {removed} sessions {url} no longer lists")
         progress(f"{len(sessions)} sessions from {url}")
         details.append({"url": url, "sessions": len(sessions), "cached": page["cached"], "fetched_at": page["fetched_at"]})
     return {"sessions": len(sids), "pages": details}
