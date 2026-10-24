@@ -11,7 +11,8 @@ models and use Crew through its MCP server:
 - **`crew-scout`**: reads each repo's README and each person's goals and maps them onto the agenda's topics.
 
 :::warning Not yet verified
-The agent specs are validated against the TrueForge SDK, but no agent has run yet.
+The agent specs are validated against the TrueForge SDK, but no agent has run in TrueForge yet. Scout's direct
+OpenAI mode (`crew scout --direct`, and the build's fallback) was tested on real repos.
 :::
 
 ## One-time setup
@@ -43,7 +44,7 @@ agenda's own words. It uses four MCP tools:
 |---|---|
 | `team_repos` | Lists repos and people, which are done, and the agenda's topic names |
 | `repo_profile` | A repo's description, dependencies, README excerpt (marked untrusted) and the agenda topics |
-| `tag_repo` | Records 1–6 topics. `evidence` must be a sentence copied from the README, or it's rejected |
+| `tag_repo` | Records 1–6 topics. `evidence` must be a full sentence (5+ words, not a heading) copied from the README, or it's rejected |
 | `map_goals` | Maps a teammate's stated goals onto 1–6 topics |
 
 Each result is a graph edge carrying its evidence, so a plan reason reads

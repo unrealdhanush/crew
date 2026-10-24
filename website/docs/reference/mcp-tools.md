@@ -36,7 +36,7 @@ The **label** is the MCP annotation TrueForge uses for approvals: read-only tool
 |---|---|---|---|
 | `team_repos` | read-only | | Repos and people, which Scout has done, the agenda's topic names |
 | `repo_profile` | read-only | `repo` | Description, dependencies, README excerpt (untrusted), owner goals, agenda topics |
-| `tag_repo` | write | `repo`, `topics[]`, `evidence` | Tagged topics and new paths to sessions. Rejects evidence not found in the README |
+| `tag_repo` | write | `repo`, `topics[]`, `evidence` | Tagged topics and new paths to sessions. Rejects evidence that isn't a full sentence (5+ words) from the README |
 | `map_goals` | write | `handle`, `topics[]` | Mapped topics and new paths to sessions |
 
 ## Setup and escape hatch

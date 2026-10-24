@@ -20,13 +20,13 @@ def draft_digest() -> dict:
         "OPTIONAL MATCH (n)-[:CITES]->(src:Source) "
         "OPTIONAL MATCH (n)-[:MENTIONS]->(k:Package)<-[:DEPENDS_ON]-(r:Repo)<-[:OWNS]-(o:Person) "
         "RETURN p.handle, n.text, s.title, collect(DISTINCT src.url), "
-        "collect(DISTINCT k.name + ' -> ' + r.full_name + ' (' + o.handle + ')') "
+        "collect(DISTINCT {package: k.name, repo: r.full_name, owner: o.handle}) "
         "ORDER BY p.handle"
     )
     gaps = blind_spots(limit=8)["unassigned_sessions_touching_our_code"]
     data = {
         "notes": [
-            {"by": r[0], "note": r[1], "session": r[2], "sources": [u for u in r[3] if u], "affects": [a for a in r[4] if a]}
+            {"by": r[0], "note": r[1], "session": r[2], "sources": [u for u in r[3] if u], "affects": [a for a in r[4] if a and a.get("repo")]}
             for r in notes
         ],
         "gaps": [{"session": g["session"], "package": g["package"], "repo": g["repo"]} for g in gaps],
