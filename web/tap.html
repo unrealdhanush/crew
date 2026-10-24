@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew check-in</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --line:#30363d; --text:#e6edf3; --muted:#8b949e; --hot:#f7b955;
+          --ok:#3fb950; --bad:#ff7b72; --link:#58a6ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 ui-sans-serif, system-ui, sans-serif;
+         padding:20px 16px 32px; }
+  header { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px; margin-bottom:16px; }
+  header b { color:var(--text); }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--hot); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  .ok { color:var(--ok); font-weight:600; font-size:12px; letter-spacing:.06em; }
+  h1 { font-size:20px; line-height:1.25; margin:6px 0 4px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 10px; font-weight:600; }
+  .meta, .muted { color:var(--muted); font-size:13px; }
+  .path { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; border-left:3px solid var(--hot);
+          background:rgba(247,185,85,.06); border-radius:4px; padding:6px 10px; margin-bottom:8px; word-break:break-word; }
+  textarea { width:100%; min-height:84px; resize:vertical; background:var(--bg); color:var(--text);
+             border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; }
+  button { font:inherit; font-weight:600; border:0; border-radius:8px; padding:11px 14px; cursor:pointer;
+           background:var(--hot); color:#1b1300; width:100%; margin-top:10px; }
+  button:disabled { opacity:.55; cursor:wait; }
+  .who { display:grid; gap:8px; }
+  .who button { background:var(--bg); color:var(--text); border:1px solid var(--line); margin:0; text-align:left; }
+  .chips span { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 9px;
+                margin:0 6px 6px 0; font-size:12px; }
+  a { color:var(--link); }
+  .src { margin-bottom:10px; font-size:13px; } .src div { color:var(--muted); white-space:pre-line; }
+  .break { border-left:3px solid var(--bad); background:rgba(255,123,114,.07); border-radius:4px; padding:8px 10px;
+           margin-bottom:8px; font-size:13px; }
+  .err { color:var(--bad); }
+</style>
+</head>
+<body>
+<header><span class="dot"></span><b>Crew</b><span id="me"></span></header>
+<main id="app"><div class="muted">Reading tag…</div></main>
+<script>
+const params = new URLSearchParams(location.search);
+const sid = params.get("s") || "";
+const store = {
+  get() { try { return localStorage.getItem("crew.handle") || ""; } catch { return ""; } },
+  set(v) { try { localStorage.setItem("crew.handle", v); } catch {} },
+};
+let handle = params.get("h") || store.get();
+const app = document.getElementById("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "#";
+
+async function post(url, body) {
+  const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(body) });
+  return r.json();
+}
+
+async function pickWho() {
+  const { people } = await (await fetch("/api/doors")).json();
+  app.innerHTML = `<div class="card"><h2>Who are you?</h2>
+    <div class="who">${people.map(p => `<button data-h="${esc(p)}">${esc(p)}</button>`).join("")}</div>
+    <p class="meta">Asked once on this phone.</p></div>`;
+  app.querySelectorAll("[data-h]").forEach(b => b.onclick = () => { handle = b.dataset.h; checkIn(); });
+}
+
+async function checkIn() {
+  if (!sid) { app.innerHTML = `<div class="card err">This tag has no session on it.</div>`; return; }
+  if (!handle) return pickWho();
+  store.set(handle);
+  document.getElementById("me").textContent = "· " + handle;
+  const r = await post("/api/tap", { handle, session: sid });
+  if (r.error) { app.innerHTML = `<div class="card err">${esc(r.error)}</div>`; return; }
+  const s = r.session;
+  const plan = r.assigned_to === handle ? "On your plan."
+    : r.assigned_to ? `On ${esc(r.assigned_to)}'s plan, so you're extra coverage.`
+    : "Nobody was assigned. You just closed a blind spot.";
+  app.innerHTML = `
+    <div class="card"><div class="ok">✓ CHECKED IN</div><h1>${esc(s.title)}</h1>
+      <div class="meta">${esc([s.start && s.start.replace("T", " "), s.room].filter(Boolean).join(" · "))}</div>
+      <p class="meta">${plan}</p></div>
+    <div class="card"><h2>Why this matters to you</h2>
+      ${r.why.length ? r.why.map(t => `<div class="path">${esc(t)}</div>`).join("")
+                     : `<div class="muted">Nothing in your code or goals connects to it.</div>`}</div>
+    <div class="card"><h2>One line from the room</h2>
+      <textarea id="note" placeholder="e.g. fastmcp 3 drops SSE, migrate to streamable http"></textarea>
+      <button id="send">Save to team brain</button><div id="out"></div></div>`;
+  document.getElementById("send").onclick = sendNote;
+}
+
+async function sendNote() {
+  const text = document.getElementById("note").value.trim();
+  const out = document.getElementById("out"), btn = document.getElementById("send");
+  if (!text) return;
+  btn.disabled = true; btn.textContent = "Fetching sources…";
+  try {
+    const r = await post("/api/note", { handle, text, session: sid });
+    if (r.error) { out.innerHTML = `<p class="err">${esc(r.error)}</p>`; return; }
+    out.innerHTML = renderNote(r);
+    document.getElementById("note").value = "";
+  } catch (e) {
+    out.innerHTML = `<p class="err">Couldn't reach Crew.</p>`;
+  } finally {
+    btn.disabled = false; btn.textContent = "Save to team brain";
+  }
+}
+
+function renderNote(r) {
+  const chips = [...r.packages, ...r.topics].map(x => `<span>${esc(x)}</span>`).join("");
+  const breaks = r.breaking_changes.map(b => `<div class="break"><b>Breaking: ${esc(b.package)}</b> ${esc(b.summary)}<br>${
+    b.affected.length ? b.affected.map(a => `${esc(a.owner)}: ${a.repos.map(esc).join(", ")}`).join("<br>")
+                      : "No repo of ours depends on it."}</div>`).join("");
+  const sources = r.sources.filter(s => s && !s.error).map(s => `<div class="src">
+    <a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener">${esc(s.title)}</a><div>${esc(s.summary)}</div></div>`).join("");
+  return `<h2 style="margin-top:16px">Saved</h2><div class="chips">${chips}</div>${breaks}${
+    sources || `<p class="muted">No sources found.</p>`}`;
+}
+
+checkIn();
+</script>
+</body>
+</html>

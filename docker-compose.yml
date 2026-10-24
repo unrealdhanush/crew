@@ -1,0 +1,30 @@
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    ports:
+      - "6379:6379"   # database
+      - "3000:3000"   # FalkorDB Browser (handy for showing raw Cypher on stage)
+    volumes:
+      - falkordb-data:/var/lib/falkordb/data
+
+  # Self-hosted Crew: docker-compose --profile app up -d  ->  http://localhost:8765/
+  # Without the profile only FalkorDB starts, for running `crew serve` from the checkout.
+  crew:
+    profiles: ["app"]
+    build: .
+    depends_on: [falkordb]
+    ports:
+      - "${CREW_HTTP_PORT:-8765}:8765"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      FALKORDB_HOST: falkordb
+      FALKORDB_PORT: "6379"
+    volumes:
+      - ./data:/app/data           # team.json and event.json survive rebuilds
+      - crew-cache:/app/.cache     # scraped pages and GitHub responses
+
+volumes:
+  falkordb-data:
+  crew-cache:

@@ -1,0 +1,36 @@
+# Secrets and local state
+.env
+.env.*
+!.env.example
+data/team.json
+data/event.json
+data/digests/
+.cache/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Docs site (Docusaurus)
+website/node_modules/
+website/build/
+website/.docusaurus/
+website/.cache-loader/
+
+# Editors and OS
+.DS_Store
+.history/
+.idea/
+.vscode/
+*.swp
+*.bak
