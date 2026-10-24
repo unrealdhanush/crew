@@ -10,18 +10,22 @@ models and use Crew through its MCP server:
 - **`crew-<handle>`**: one per teammate. Plans, "why am I here?", check-ins, notes, ripple, team memory, digest.
 - **`crew-scout`**: reads each repo's README and each person's goals and maps them onto the agenda's topics.
 
-:::warning Not yet verified
-The agent specs are validated against the TrueForge SDK, but no agent has run in TrueForge yet. Scout's direct
-OpenAI mode (`crew scout --direct`, and the build's fallback) was tested on real repos.
+:::note Verification
+Tested in TrueForge on Oct 24 with `openai/gpt-5-4-mini`: `crew forge-setup` created and updated the agents, Scout
+tagged real repos from inside TrueForge (also as a hand-off from the `/team` build), and a teammate agent drafted
+the digest freely but paused for approval on `publish_digest`.
 :::
 
 ## One-time setup
 
-1. Start TrueForge and open `http://localhost:8790`:
+1. Start TrueForge and open `http://localhost:8790`. TrueForge blocks outbound requests to local addresses, so
+   allow Crew's address explicitly (a JSON array; everything else stays blocked):
 
    ```bash
-   npx @truefoundry/trueforge@latest
+   OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx @truefoundry/trueforge@latest
    ```
+
+   Without it, adding the connector fails with `Outbound URL blocked for host "127.0.0.1"`.
 
 2. **Settings → Models:** add OpenAI and paste your key.
 3. **Settings → Connectors → Add MCP Server:** name `crew`, URL `http://127.0.0.1:8765/mcp`, no auth. (The SDK
@@ -32,13 +36,14 @@ OpenAI mode (`crew scout --direct`, and the build's fallback) was tested on real
    crew forge-setup
    ```
 
-   It creates or updates `crew-scout` and a `crew-<handle>` agent per teammate, on `openai/$OPENAI_MODEL`
-   (override with `CREW_FORGE_MODEL`). Re-run it after the team changes.
+   It creates or updates `crew-scout` and a `crew-<handle>` agent per teammate. They use `CREW_FORGE_MODEL`, which
+   must be a model TrueForge lists (e.g. `openai/gpt-5-4-mini`); it defaults to `openai/$OPENAI_MODEL`. Crew's
+   tools are preloaded, so agents call them directly. Re-run it after the team changes.
 
 ## Crew Scout
 
 Dependencies show what code is exposed to. Scout adds what a repo is about and what people want to learn, in the
-agenda's own words. It uses four MCP tools:
+agenda's own words. It can use only these four MCP tools (its agent spec enables nothing else):
 
 | Tool | What it does |
 |---|---|

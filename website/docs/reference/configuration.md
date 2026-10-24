@@ -53,7 +53,7 @@ when installed as a CLI). Real environment variables win over `.env`.
 |---|---|---|
 | `TRUEFORGE_BASE_URL` | `http://localhost:8790` | TrueForge server |
 | `CREW_FORGE_MCP` | `crew` | Name of Crew's connector in TrueForge |
-| `CREW_FORGE_MODEL` | `openai/$OPENAI_MODEL` | Model for Crew's agents |
+| `CREW_FORGE_MODEL` | `openai/$OPENAI_MODEL` | Model for Crew's agents; must be one TrueForge lists, e.g. `openai/gpt-5-4-mini` |
 
 ## CLI and integrations
 
