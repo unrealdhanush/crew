@@ -526,8 +526,10 @@ def write_sessions(sessions: list[dict], source_url: str, fetched_at: str, progr
 
 
 def prune_sessions(url: str, keep: set[str]) -> int:
-    """Delete sessions this page used to list but no longer does, unless another page lists them or the team
-    has notes, check-ins or plans on them."""
+    """Delete sessions this page used to list but no longer does, unless another page lists them or the team has
+    notes or check-ins on them. Plan assignments don't protect a session: the plan is recomputed after publishing.
+    If this extraction found nothing, or under half of what the page had before, it's treated as incomplete and
+    nothing is deleted."""
     rows = G.rows(
         "MATCH (s:Session)-[:CITES]->(:Source {url: $url}) "
         "OPTIONAL MATCH (s)-[:CITES]->(o:Source) WHERE o.url <> $url "
@@ -535,6 +537,8 @@ def prune_sessions(url: str, keep: set[str]) -> int:
         "RETURN s.sid, count(DISTINCT o), count(DISTINCT r)",
         {"url": url},
     )
+    if not keep or len(keep) < len(rows) / 2:  # likely a failed or partial extraction: keep what we have
+        return 0
     stale = [sid for sid, others, used in rows if sid not in keep and others == 0 and used == 0]
     if stale:
         G.q("MATCH (s:Session) WHERE s.sid IN $sids DETACH DELETE s", {"sids": stale})
