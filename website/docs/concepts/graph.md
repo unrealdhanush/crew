@@ -70,3 +70,19 @@ matters most to, avoiding time clashes. Sessions where everyone is busy are repo
 - **Blind spot:** a session about a package your code depends on with no `ASSIGNED_TO` edge. An empty result means
   every such session has someone in it.
 - **Ripple:** start at a package and walk back to repos and owners, plus any notes that mention it.
+
+## Reading the graph view
+
+`/viz` lays the graph out in columns, left to right: people, repos and notes, packages and topics, sessions, speakers
+and sources. Boxes never overlap, and long names are cut short (the full name shows on hover and in the side panel).
+
+- **Hover** a box to light it and what it connects to; **click** to pin it and list its connections. Click a row to hop there.
+- **Find** matches names; Enter jumps to the first match. **Fit to screen** resets the view.
+- The latest answer's path is drawn in purple. Edge names appear only when a handful of edges are lit, so they stay readable.
+- Very long columns wrap into side-by-side sub-columns.
+
+:::note Verification
+Tested on Oct 24 in a browser against a stand-in for the Crew API (no box overlaps, hover, pin, search, fit, phone and
+embedded sizes). Not run against a live `crew serve` with FalkorDB.
+:::
+
