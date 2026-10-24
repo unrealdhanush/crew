@@ -1,0 +1,62 @@
+---
+title: HTTP API and pages
+sidebar_position: 4
+description: The web pages and JSON endpoints served by crew serve.
+---
+
+All on the same server as the MCP endpoint (default `http://127.0.0.1:8765`). Responses are JSON; errors are
+`{"error": "..."}`.
+
+:::danger No authentication
+None of these endpoints check who's calling, including `/api/reset`, which deletes the graph. Keep Crew on
+`127.0.0.1` unless you're on a network you trust.
+:::
+
+## Pages
+
+| Path | Page |
+|---|---|
+| `/` | Home: the pitch, live counts, clear graph |
+| `/organizer` | Publish the agenda |
+| `/stickers` | Printable NFC/QR door stickers |
+| `/team` | Team onboarding and live build |
+| `/viz` | Live graph view; highlights the latest answer's paths |
+| `/tap?s=<session id>` | What a door sticker opens: check-in and note |
+| `/sim` | Tap simulator for demos |
+
+## Graph and status
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/graph` | Up to 2,000 edges with their nodes, for the viewer |
+| GET | `/api/highlight` | The paths behind the latest answer: `{title, paths, at}` |
+| GET | `/api/stats` | Counts: `persons`, `repos`, `packages`, `sessions`, `notes`, `bridges` |
+| GET | `/api/setup` | Saved `team`, `event`, and the `github` API address in use |
+| GET | `/api/doors` | People and sessions, for the tap pages and stickers |
+
+## Builds
+
+| Method | Path | Body / query | Description |
+|---|---|---|---|
+| POST | `/api/build` | `{"kind": "event" \| "team", "payload": {...}}` | Start a background build. One at a time |
+| GET | `/api/build?since=N` | | Progress events after index `N`, `state` (`running`, `done`, `error`), `result` |
+| POST | `/api/reset` | `{"confirm": "reset"}` | Delete the graph |
+
+Event payload: `{"name", "urls": [...], "sample": bool}`.
+Team payload: `{"team", "members": [{"handle", "name", "goals": [...], "repos": [...], "uploads": [...]}], "token"?, "scout"?}`.
+The token is used for that build only and not saved.
+
+## GitHub and dependency lists
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/github/repos?user=U&org=O` | A user's public repos, plus the org's (private too with an `X-GitHub-Token` header) |
+| POST | `/api/parse` | `{"filename", "text"}` → `{"deps", "dev_deps"}`. The file isn't kept |
+| POST | `/api/import` | Where `crew scan` sends `{"handle", "name", "deps", "dev_deps", "via"}` |
+
+## Tap flow
+
+| Method | Path | Body | Description |
+|---|---|---|---|
+| POST | `/api/tap` | `{"handle", "session"}` | Check in; returns the session, who's assigned, and why-paths |
+| POST | `/api/note` | `{"handle", "text", "session"?}` | Save a note (see [Notes](../guides/notes-and-digest.md)) |

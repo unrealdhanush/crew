@@ -1,0 +1,72 @@
+/* Shared look for Crew's app pages (home, organizer, team). The graph viewer, tap and sim pages carry their own. */
+:root { --bg:#0d1117; --panel:#161b22; --raised:#1c2128; --line:#30363d; --text:#e6edf3; --muted:#8b949e;
+        --hot:#f7b955; --ok:#3fb950; --warn:#d29922; --bad:#ff7b72; --link:#58a6ff; }
+* { box-sizing: border-box; }
+html, body { margin:0; }
+body { background:var(--bg); color:var(--text); font:15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+a { color:var(--link); text-decoration:none; } a:hover { text-decoration:underline; }
+
+nav.top { display:flex; align-items:center; gap:22px; padding:14px 24px; border-bottom:1px solid var(--line);
+          background:var(--panel); font-size:14px; }
+nav.top .brand { font-weight:700; color:var(--text); display:flex; align-items:center; gap:8px; margin-right:8px; }
+nav.top .brand i { width:9px; height:9px; border-radius:50%; background:var(--hot); display:inline-block; }
+nav.top a { color:var(--muted); } nav.top a.on { color:var(--text); }
+nav.top .spacer { flex:1; }
+
+.wrap { max-width:1080px; margin:0 auto; padding:40px 24px 64px; }
+h1 { font-size:34px; line-height:1.15; margin:0 0 12px; letter-spacing:-.01em; }
+h2 { font-size:20px; margin:0 0 6px; }
+h3 { font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin:0 0 10px; font-weight:600; }
+.lede { color:var(--muted); font-size:17px; max-width:680px; margin:0 0 28px; }
+.muted { color:var(--muted); } .small { font-size:13px; }
+
+.card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:20px; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
+.stack > * + * { margin-top:14px; }
+
+label { display:block; font-size:13px; color:var(--muted); margin:0 0 5px; }
+input[type=text], textarea { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line);
+  border-radius:8px; padding:9px 11px; font:inherit; }
+input[type=text]:focus, textarea:focus { outline:none; border-color:var(--hot); }
+textarea { resize:vertical; min-height:72px; }
+.row { display:flex; gap:10px; align-items:flex-end; } .row > .grow { flex:1; }
+
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; font:inherit; font-weight:600;
+       border:1px solid transparent; border-radius:8px; padding:9px 16px; cursor:pointer;
+       background:var(--hot); color:#1b1300; text-decoration:none; white-space:nowrap; }
+.btn:hover { text-decoration:none; filter:brightness(1.08); }
+.btn:disabled { opacity:.5; cursor:wait; }
+.btn.ghost { background:transparent; color:var(--text); border-color:var(--line); }
+.btn.danger { background:transparent; color:var(--bad); border-color:var(--line); }
+.btn.big { padding:12px 20px; font-size:16px; }
+
+.chip { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:1px 9px; font-size:12px;
+        color:var(--muted); margin:0 6px 6px 0; }
+.chip.hot { color:var(--hot); border-color:rgba(247,185,85,.5); }
+
+.stat { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+.stat b { display:block; font-size:28px; font-variant-numeric:tabular-nums; line-height:1.1; }
+.stat span { color:var(--muted); font-size:13px; }
+
+/* Build page: form on the left, the live graph on the right */
+.split { display:grid; grid-template-columns:minmax(380px, 460px) 1fr; height:calc(100vh - 51px); }
+.split > .side { overflow:auto; padding:24px; border-right:1px solid var(--line); }
+.split > iframe { border:0; width:100%; height:100%; }
+
+.feed { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px; background:var(--bg);
+        border:1px solid var(--line); border-radius:8px; padding:10px 12px; max-height:260px; overflow:auto; }
+.feed:empty { display:none; }
+.feed div { padding:2px 0; } .feed .ok { color:var(--ok); } .feed .warn { color:var(--warn); } .feed .error { color:var(--bad); }
+.banner { border:1px solid rgba(210,153,34,.5); background:rgba(210,153,34,.08); border-radius:8px; padding:10px 12px; font-size:13px; }
+.err { color:var(--bad); font-size:13px; }
+
+@media (max-width: 900px) {
+  .grid2, .grid3 { grid-template-columns:1fr; }
+  .split { grid-template-columns:1fr; height:auto; }
+  .split > .side { border-right:0; border-bottom:1px solid var(--line); }
+  .split > iframe { height:70vh; }
+  nav.top { flex-wrap:wrap; gap:12px 16px; padding:12px 16px; }
+  .wrap { padding:28px 16px 48px; }
+  h1 { font-size:28px; }
+}

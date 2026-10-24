@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew</title>
+<link rel="stylesheet" href="/static/crew.css">
+<style>
+  .hero { padding:24px 0 8px; }
+  .roles .card { display:flex; flex-direction:column; gap:10px; }
+  .roles .card p { margin:0; color:var(--muted); flex:1; }
+  .roles .who { font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--hot); font-weight:600; }
+  .stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin:36px 0 8px; }
+  .steps { counter-reset:step; margin-top:40px; }
+  .steps .card { position:relative; padding-top:44px; }
+  .steps .card::before { counter-increment:step; content:counter(step); position:absolute; top:16px; left:20px;
+    width:22px; height:22px; border-radius:50%; background:var(--raised); border:1px solid var(--line);
+    font-size:12px; font-weight:700; display:grid; place-items:center; color:var(--hot); }
+  .steps p { margin:4px 0 0; color:var(--muted); font-size:14px; }
+  .path { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px; color:var(--muted);
+          border-left:3px solid var(--hot); padding:8px 12px; background:rgba(247,185,85,.05); border-radius:4px; margin-top:28px; }
+  .path b { color:var(--text); font-weight:500; }
+  footer { margin-top:48px; padding-top:20px; border-top:1px solid var(--line); display:flex; gap:12px;
+           align-items:center; flex-wrap:wrap; color:var(--muted); font-size:13px; }
+  footer .spacer { flex:1; }
+  @media (max-width: 900px) { .stats { grid-template-columns:repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="hero">
+    <h1>Send four people to a conference.<br>Bring back one brain.</h1>
+    <p class="lede">Crew connects your team's code to the conference agenda in one shared graph. It splits the sessions so
+      every talk that touches your code has someone in the room, and turns one-line notes into cited team knowledge.</p>
+  </section>
+
+  <section class="grid2 roles">
+    <div class="card">
+      <div class="who">For organizers</div>
+      <h2>Publish your agenda</h2>
+      <p>Paste the agenda URL. Crew scrapes it live, finds every session, speaker and technology, and gives you a sheet of
+        NFC/QR stickers for the doors.</p>
+      <div><a class="btn" href="/organizer">Set up an event</a></div>
+    </div>
+    <div class="card">
+      <div class="who">For teams</div>
+      <h2>Connect your team</h2>
+      <p>Add teammates by GitHub username and pick their repos. Crew reads the dependencies, finds the sessions that touch
+        your code, and plans who goes where.</p>
+      <div><a class="btn" href="/team">Set up your team</a></div>
+    </div>
+  </section>
+
+  <section class="stats" id="stats" aria-live="polite">
+    <div class="stat"><b data-k="persons">–</b><span>teammates</span></div>
+    <div class="stat"><b data-k="repos">–</b><span>repos read</span></div>
+    <div class="stat"><b data-k="sessions">–</b><span>sessions</span></div>
+    <div class="stat"><b data-k="bridges">–</b><span>places your code meets the agenda</span></div>
+  </section>
+
+  <section class="grid3 steps">
+    <div class="card"><h2>Organizer publishes</h2><p>Bright Data scrapes the live agenda; sessions, speakers and the
+      packages they cover land in the graph.</p></div>
+    <div class="card"><h2>Team connects code</h2><p>Repos and their dependencies join the same graph. Shared packages and
+      topics become bridges, and the planner splits the room list.</p></div>
+    <div class="card"><h2>Tap in at the door</h2><p>A tap checks you in and shows why you're there. A one-line note gets
+      its sources fetched and tells owners what breaks.</p></div>
+  </section>
+
+  <div class="path">Every answer is a path you can see:
+    <b>dhanush</b> -OWNS-> <b>openai-agents-python</b> -DEPENDS_ON-> <b>mcp</b> &lt;-MENTIONS- <b>Shipping MCP servers to production</b></div>
+
+  <footer>
+    <a class="btn ghost" href="/sim">Tap demo</a>
+    <a class="btn ghost" href="/viz">Live graph</a>
+    <span class="spacer"></span>
+    <span id="resetmsg"></span>
+    <button class="btn danger" id="reset">Clear graph</button>
+  </footer>
+</main>
+<script src="/static/crew.js"></script>
+<script>
+Crew.nav("/");
+async function loadStats() {
+  try {
+    const s = await Crew.api("/api/stats");
+    document.querySelectorAll("[data-k]").forEach(el => el.textContent = s[el.dataset.k] ?? "–");
+  } catch (e) { /* server restarting; try again next tick */ }
+}
+document.getElementById("reset").onclick = async () => {
+  if (!confirm("Clear the whole graph? Teams, sessions, notes and check-ins are all removed.")) return;
+  const r = await Crew.api("/api/reset", { confirm:"reset" });
+  document.getElementById("resetmsg").textContent = r.ok ? "Graph cleared." : (r.error || "Couldn't clear");
+  loadStats();
+};
+loadStats(); setInterval(loadStats, 3000);
+</script>
+</body>
+</html>

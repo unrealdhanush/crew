@@ -1,0 +1,10 @@
+.git
+.venv
+.cache
+.env
+**/__pycache__
+*.pyc
+*.egg-info
+data/team.json
+data/event.json
+data/digests

@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew team</title>
+<link rel="stylesheet" href="/static/crew.css">
+<style>
+  .member { background:var(--raised); border:1px solid var(--line); border-radius:10px; padding:14px; position:relative; }
+  .member .x { position:absolute; top:8px; right:8px; background:none; border:0; color:var(--muted); font-size:18px;
+               cursor:pointer; line-height:1; padding:4px 6px; }
+  .member .x:hover { color:var(--bad); }
+  .member > * + * { margin-top:10px; }
+  .repos { display:grid; gap:4px; max-height:220px; overflow:auto; }
+  .repo { display:flex; gap:8px; align-items:flex-start; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:13px; }
+  .repo:hover { background:var(--panel); }
+  .repo input { margin-top:3px; accent-color:var(--hot); }
+  .repo .d { color:var(--muted); font-size:12px; }
+  .person { border-top:1px solid var(--line); padding-top:10px; margin-top:10px; }
+  .person:first-of-type { border-top:0; margin-top:0; padding-top:0; }
+  .person ul { margin:6px 0 0; padding-left:18px; font-size:13px; }
+  details.private { border:1px solid var(--line); border-radius:10px; padding:10px 14px; }
+  details.private summary { cursor:pointer; font-size:14px; }
+  details.private[open] summary { margin-bottom:10px; }
+  details.private > * + * { margin-top:10px; }
+  input[type=password] { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line);
+    border-radius:8px; padding:9px 11px; font:inherit; }
+  .chip .rm { background:none; border:0; color:inherit; cursor:pointer; padding:0 0 0 4px; font:inherit; }
+  .upload { position:relative; overflow:hidden; }
+  .upload input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .person li span { color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="split">
+  <section class="side stack">
+    <div>
+      <h3>Team</h3>
+      <h2>Connect your team</h2>
+      <p class="muted small">Add each teammate's GitHub username and pick the repos they work on. Crew reads the dependency
+        files, links them to the agenda and plans who goes where. Only public repos are read.</p>
+    </div>
+    <div id="noagenda" class="banner" hidden>No agenda has been published yet. You can still add your team, but there's
+      nothing to plan until the <a href="/organizer">organizer</a> publishes one.</div>
+    <div>
+      <label for="teamname">Team name</label>
+      <input type="text" id="teamname" placeholder="Platform team">
+    </div>
+    <details class="private">
+      <summary>Private repos or GitHub Enterprise</summary>
+      <p class="muted small">Crew only reads dependency lists, never code. With an org and a read-only token,
+        <b>Find repos</b> also lists the org's private repos. The token stays in this page: it's sent with requests and
+        never saved, and nothing fetched with it is cached.</p>
+      <div class="small muted">GitHub server: <code id="ghserver">github.com</code></div>
+      <div><label for="org">GitHub org</label><input type="text" id="org" placeholder="acme"></div>
+      <div><label for="token">Read-only token (fine-grained: Contents and Metadata, read)</label>
+        <input type="password" id="token" autocomplete="off" placeholder="github_pat_…"></div>
+      <p class="muted small">Not on GitHub, or nothing may leave your network? Run
+        <code>crew scan &lt;handle&gt; ./your-repo</code> on your machine. It sends package names only.
+        Or upload a dependency file on a teammate's card.</p>
+    </details>
+    <div id="members" class="stack"></div>
+    <button class="btn ghost" id="add">+ Add teammate</button>
+    <label class="small" style="display:flex;gap:8px;align-items:center;color:var(--text)">
+      <input type="checkbox" id="scout" checked style="accent-color:var(--hot)">
+      Crew Scout reads READMEs and goals (TrueForge agent, OpenAI)</label>
+    <button class="btn big" id="build">Build our graph</button>
+    <div class="feed" id="feed"></div>
+    <div id="out"></div>
+  </section>
+  <iframe src="/viz" title="Live graph"></iframe>
+</div>
+<script src="/static/crew.js"></script>
+<script>
+Crew.nav("/team");
+const $ = id => document.getElementById(id), esc = Crew.esc;
+const members = [];
+
+function addMember(m = {}) {
+  const state = { handle:m.handle || "", name:m.name || "", goals:(m.goals || []).join(", "), uploads:m.uploads || [],
+                  selected:new Set(m.repos || []), options:(m.repos || []).map(full_name => ({ full_name })) };
+  members.push(state);
+  const el = document.createElement("div");
+  el.className = "member";
+  el.innerHTML = `
+    <button class="x" title="Remove teammate" aria-label="Remove teammate">×</button>
+    <div class="row">
+      <div class="grow"><label>GitHub username</label><input type="text" data-f="handle" placeholder="octocat"></div>
+      <button class="btn ghost" data-a="find">Find repos</button>
+    </div>
+    <div><label>Name</label><input type="text" data-f="name" placeholder="Their name"></div>
+    <div><label>Goals at the conference, comma separated</label>
+      <input type="text" data-f="goals" placeholder="agents, supply-chain-security, github-actions"></div>
+    <div class="repos"></div>
+    <div class="row">
+      <div class="grow"><input type="text" data-a="reponame" placeholder="Add a repo by name: owner/repo"></div>
+      <button class="btn ghost" data-a="addrepo">Add</button>
+    </div>
+    <div class="uploads"></div>
+    <div><span class="btn ghost upload">Upload a dependency file
+      <input type="file" data-a="file" accept=".txt,.json,.toml,.mod" title="requirements.txt, package.json, pyproject.toml or go.mod"></span></div>
+    <div class="err" data-f="err"></div>`;
+  el.querySelectorAll("input[data-f]").forEach(input => {
+    input.value = state[input.dataset.f];
+    input.oninput = () => { state[input.dataset.f] = input.value.trim(); };
+  });
+  el.querySelector('input[data-f="handle"]').onkeydown = e => { if (e.key === "Enter") findRepos(); };
+  el.querySelector(".x").onclick = () => { members.splice(members.indexOf(state), 1); el.remove(); };
+
+  const list = el.querySelector(".repos"), err = el.querySelector('[data-f="err"]');
+  function renderRepos() {
+    list.innerHTML = state.options.map((r, i) => `<label class="repo">
+      <input type="checkbox" data-i="${i}" ${state.selected.has(r.full_name) ? "checked" : ""}>
+      <div><div>${esc(r.full_name)}${r.private ? ` <span class="chip hot">private</span>` : ""}${r.stars ? ` <span class="d">★ ${r.stars}</span>` : ""}</div>
+      ${r.description || r.language ? `<div class="d">${esc([r.language, r.description].filter(Boolean).join(" · "))}</div>` : ""}</div>
+    </label>`).join("");
+    list.querySelectorAll("input").forEach(box => box.onchange = () => {
+      const name = state.options[+box.dataset.i].full_name;
+      box.checked ? state.selected.add(name) : state.selected.delete(name);
+    });
+  }
+  async function findRepos() {
+    const btn = el.querySelector('[data-a="find"]');
+    err.textContent = ""; btn.disabled = true; btn.textContent = "Looking…";
+    try {
+      const org = $("org").value.trim(), token = $("token").value.trim();
+      const r = await (await fetch(`/api/github/repos?user=${encodeURIComponent(state.handle)}&org=${encodeURIComponent(org)}`,
+                                   { headers:token ? { "X-GitHub-Token":token } : {} })).json();
+      if (r.error) { err.textContent = r.error; return; }
+      const known = new Set(r.repos.map(x => x.full_name));
+      state.options = [...r.repos, ...state.options.filter(o => !known.has(o.full_name) && state.selected.has(o.full_name))];
+      if (!state.selected.size) r.repos.slice(0, 2).forEach(x => state.selected.add(x.full_name));
+      if (!r.repos.length) err.textContent = "No public repos found.";
+      renderRepos();
+    } finally { btn.disabled = false; btn.textContent = "Find repos"; }
+  }
+  el.querySelector('[data-a="find"]').onclick = findRepos;
+
+  const repoInput = el.querySelector('[data-a="reponame"]');
+  function addRepo() {
+    const name = repoInput.value.trim().replace(/^https?:\/\/[^/]+\//, "").replace(/\.git$/, "");
+    if (!/^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(name)) { err.textContent = "Use owner/repo"; return; }
+    err.textContent = "";
+    if (!state.options.some(o => o.full_name === name)) state.options.push({ full_name:name });
+    state.selected.add(name); repoInput.value = ""; renderRepos();
+  }
+  el.querySelector('[data-a="addrepo"]').onclick = addRepo;
+  repoInput.onkeydown = e => { if (e.key === "Enter") addRepo(); };
+
+  const upList = el.querySelector(".uploads");
+  function renderUploads() {
+    upList.innerHTML = state.uploads.map((u, i) => `<span class="chip hot" title="${esc(u.deps.slice(0, 30).join(", "))}">
+      ${esc(u.name)} · ${u.deps.length} packages<button class="rm" data-i="${i}" aria-label="Remove">×</button></span>`).join("");
+    upList.querySelectorAll(".rm").forEach(b => b.onclick = () => { state.uploads.splice(+b.dataset.i, 1); renderUploads(); });
+  }
+  el.querySelector('[data-a="file"]').onchange = async e => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    err.textContent = "";
+    const r = await Crew.api("/api/parse", { filename:file.name, text:await file.text() });
+    if (r.error) { err.textContent = r.error; return; }
+    const base = (state.handle ? state.handle + "-" : "") + file.name.replace(/\.[^.]+$/, "");
+    state.uploads.push({ name:base.replace(/[^A-Za-z0-9._-]+/g, "-").slice(0, 60), deps:r.deps, dev_deps:r.dev_deps, via:"upload" });
+    renderUploads();
+  };
+  renderRepos(); renderUploads();
+  $("members").appendChild(el);
+  return el;
+}
+
+function renderResult(r) {
+  const chips = r.bridges.map(b => `<span class="chip hot">${esc(b.name)}</span>`).join("") || `<span class="muted small">None yet</span>`;
+  const plan = r.plan && Object.entries(r.plan.schedule).map(([h, items]) => `<div class="person"><b>${esc(h)}</b>
+      ${items.length ? `<ul>${items.map(i => `<li>${esc(i.title)}<br><span>${esc(i.why)}</span></li>`).join("")}</ul>`
+                     : `<div class="muted small">Free to roam</div>`}</div>`).join("");
+  const skipped = r.summary.skipped.length ? `<p class="err">Skipped: ${r.summary.skipped.map(esc).join(", ")}</p>` : "";
+  return `<div class="card stack">
+    <div><h3>Bridges: where your code meets the agenda</h3>${chips}</div>
+    ${plan ? `<div><h3>Coverage plan</h3>${plan}</div>` : ""}
+    ${skipped}
+    <div class="row"><a class="btn" href="/sim">Try the tap demo</a><a class="btn ghost" href="/viz">Full graph</a></div>
+  </div>`;
+}
+
+$("add").onclick = () => addMember().querySelector('input[data-f="handle"]').focus();
+$("build").onclick = async () => {
+  const payload = { team:$("teamname").value, members:members.filter(m => m.handle).map(m => ({
+    handle:m.handle, name:m.name, goals:m.goals.split(",").map(g => g.trim()).filter(Boolean),
+    repos:[...m.selected], uploads:m.uploads })), token:$("token").value.trim(), scout:$("scout").checked };
+  $("build").disabled = true; $("out").innerHTML = "";
+  try {
+    $("out").innerHTML = renderResult(await Crew.runBuild("team", payload, $("feed")));
+  } catch (e) {
+    $("out").innerHTML = `<p class="err">${esc(e.message)}</p>`;
+  } finally { $("build").disabled = false; }
+};
+
+Promise.all([Crew.api("/api/setup"), Crew.api("/api/stats")]).then(([setup, stats]) => {
+  $("noagenda").hidden = !!stats.sessions;
+  $("ghserver").textContent = setup.github.replace(/^https?:\/\//, "");
+  const team = setup.team;
+  $("teamname").value = team?.team || "";
+  (team?.members?.length ? team.members : [{}]).forEach(addMember);
+});
+</script>
+</body>
+</html>

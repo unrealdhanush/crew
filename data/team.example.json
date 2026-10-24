@@ -1,0 +1,17 @@
+{
+  "team": "Our platform team",
+  "members": [
+    {
+      "handle": "dhanush",
+      "name": "Dhanush",
+      "goals": ["agents", "evals", "mcp"],
+      "repos": ["owner/repo-one"]
+    },
+    {
+      "handle": "teammate",
+      "name": "Teammate",
+      "goals": ["supply-chain-security", "github-actions"],
+      "repos": ["owner/repo-two"]
+    }
+  ]
+}
