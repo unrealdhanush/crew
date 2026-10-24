@@ -117,7 +117,8 @@ _INJECTION = re.compile(
     r"(ignore (all |any )?(previous|prior|above) instructions"
     r"|disregard (all |the )?(previous|prior|above)"
     r"|you are now|new instructions:|system prompt"
-    r"|</?(system|assistant|developer)>)",
+    # role tags, and our own delimiters, so web text can't close its wrapper or pose as a teammate's note
+    r"|<\s*/?\s*(system|assistant|developer|untrusted_web_content|user_note)\s*>)",
     re.IGNORECASE,
 )
 

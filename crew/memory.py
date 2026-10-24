@@ -1,7 +1,7 @@
 """Team memory: 'what did we learn about X?', answered only from the graph, with citations and paths."""
 import re
 
-from . import llm
+from . import llm, web
 from . import graph as G
 from .ingest import norm_pkg
 
@@ -31,6 +31,12 @@ def _fulltext(label: str, terms: list[str]) -> list:
         )
     except Exception:
         return []
+
+
+def source_context(sid: str, url: str, title: str, summary: str, fetched_at: str) -> str:
+    """One cited source for the model. Title and summary come from a fetched web page, so they're wrapped as
+    untrusted; the URL and fetch time are ours."""
+    return f"[{sid}] ({url}, fetched {fetched_at}) " + web.wrap_untrusted(f"{title}\n{summary}", limit=2000)
 
 
 def find_notes(question: str) -> list[str]:
@@ -91,7 +97,7 @@ def ask_team(question: str) -> dict:
                 continue
             sid = f"S{len(source_ids) + 1}"
             source_ids[url] = sid
-            context.append(f"[{sid}] {title} ({url}, fetched {fetched_at}): {summary}")
+            context.append(source_context(sid, url, title, summary, fetched_at))
             citations.append({"id": sid, "url": url, "title": title, "fetched_at": fetched_at})
 
     G.highlight(f"Team memory: {question}", paths)
