@@ -19,8 +19,7 @@ natively, so there's no app to install.
 The graph view lights up the check-in and, after a note, the note's links.
 
 :::note Verification
-Check-ins are tested, and notes were tested against OpenAI. Fetching a note's sources needs Bright Data zones and
-hasn't been run yet.
+Check-ins and notes, including fetching their sources through Bright Data, are tested.
 :::
 
 ## Demo without stickers: `/sim`
