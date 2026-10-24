@@ -33,14 +33,40 @@ const Crew = (() => {
       `<a class="brand" href="/" aria-label="Crew home"><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Crew</a>
        <button class="menu" type="button" aria-expanded="false" aria-controls="navlinks">Menu</button>
        <div class="links" id="navlinks">${LINKS.map(([href, label]) =>
-         `<a href="${href}"${href === active ? ' aria-current="page"' : ""}>${label}</a>`).join("")}</div>`;
+         `<a href="${href}"${href === active ? ' aria-current="page"' : ""}>${label}</a>`).join("")}<span class="spacer"></span>
+         <button class="btn small ghost tour-btn" type="button" data-start-tour title="A guided tour of the app">Tour</button></div>`;
     const btn = el.querySelector(".menu");
     btn.onclick = () => btn.setAttribute("aria-expanded", String(el.classList.toggle("open")));
     document.body.prepend(el);
     const skip = document.createElement("a");
     skip.className = "skip"; skip.href = "#main"; skip.textContent = "Skip to content";
     document.body.prepend(skip);
+    // Mid-tour (progress saved by the last page) or opened with ?tour=1: carry on or begin.
+    let midTour = false;
+    try { midTour = !!localStorage.getItem("crew.tour"); } catch (e) {}
+    if (/[?&]tour=1\b/.test(location.search)) tour("start"); else if (midTour) tour("resume");
   }
+
+  // The guided tour loads on demand, so most visits (and the phone page) never download it.
+  let tourLoading = null;
+  function loadTour() {
+    if (!tourLoading) tourLoading = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "/static/tour.js";
+      s.onload = () => resolve(window.CrewTour);
+      s.onerror = () => { tourLoading = null; reject(new Error("tour.js")); };
+      document.head.appendChild(s);
+    });
+    return tourLoading;
+  }
+  async function tour(action = "start") {
+    try { (await loadTour())[action](); }
+    catch (e) { toast("The tour couldn't load. Check that Crew is running, then try again."); }
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-start-tour]");
+    if (b) { e.preventDefault(); tour("start"); }
+  });
 
   let toastTimer;
   function toast(message) {
@@ -76,5 +102,5 @@ const Crew = (() => {
     }
   }
 
-  return { esc, api, nav, toast, runBuild };
+  return { esc, api, nav, toast, runBuild, tour };
 })();
