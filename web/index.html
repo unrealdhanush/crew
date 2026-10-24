@@ -15,7 +15,25 @@
   #net .vis-network { outline:none; }
   aside { background:var(--paper); border-left:2px solid var(--ink); padding:20px; overflow:auto; }
   aside h1 { font-size:22px; }
-  .sub { color:var(--muted); margin:6px 0 18px; font-size:15px; }
+  .sub { color:var(--muted); margin:6px 0 14px; font-size:15px; }
+  #find { width:100%; box-sizing:border-box; border:2px solid var(--ink); border-radius:10px; padding:9px 12px; font:inherit; font-size:15px; background:#fff; }
+  #find:focus-visible { outline:3px solid var(--brain); outline-offset:1px; }
+  #findinfo { color:var(--muted); font-size:13px; min-height:18px; margin:6px 0 12px; }
+  .detail { border:2px solid var(--ink); border-radius:10px; background:#fff; box-shadow:3px 3px 0 var(--ink); padding:12px; margin:0 0 16px; }
+  .detail[hidden] { display:none; }
+  .dhead { display:flex; gap:8px; align-items:flex-start; }
+  .dhead b { flex:1; font:700 15px var(--display); word-break:break-word; }
+  .dhead .node { padding:1px 9px; font-size:12px; flex:none; }
+  .dhead .x { border:0; background:none; font-size:22px; line-height:1; cursor:pointer; color:var(--muted); padding:0 2px; }
+  .drows { list-style:none; margin:10px 0 0; padding:0; display:grid; gap:4px; }
+  .drows button { width:100%; box-sizing:border-box; text-align:left; padding:5px 8px; border-radius:6px; border:1px solid var(--line);
+                  background:var(--paper); font:inherit; font-size:13px; cursor:pointer; word-break:break-word; color:var(--ink); }
+  .drows button:hover { border-color:var(--brain); }
+  .drows button:focus-visible, .dhead .x:focus-visible { outline:3px solid var(--brain); outline-offset:1px; }
+  .drows .v { color:var(--muted); margin-right:6px; }
+  .drows .more { color:var(--muted); font-size:13px; padding:2px 8px; }
+  .vis-tooltip { font:13px system-ui, sans-serif !important; color:var(--ink) !important; background:#fff !important; border:2px solid var(--ink) !important;
+                 border-radius:8px !important; padding:5px 9px !important; box-shadow:2px 2px 0 var(--ink); max-width:320px; white-space:normal !important; }
   #title { font:700 17px var(--display); margin:0 0 12px; }
   #title:empty { display:none; }
   .path { border:1px solid var(--line); border-left:4px solid var(--brain); background:var(--card); border-radius:8px; padding:10px 12px;
@@ -24,7 +42,7 @@
   .legend { display:flex; flex-wrap:wrap; gap:8px; margin-top:22px; }
   .legend .node { padding:1px 9px; font-size:12px; flex-direction:row; }
   #stats { color:var(--muted); font-size:13px; margin-top:14px; }
-  #focus { margin-top:12px; }
+  .tools { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
   #emptyg { position:absolute; inset:0; display:none; place-items:center; padding:24px; text-align:center; z-index:2; background:#fff; }
   #emptyg.show { display:grid; }
   #emptyg .box { max-width:340px; }
@@ -39,7 +57,7 @@
 <body>
 <div class="app" id="main">
   <div class="canvas">
-    <div id="net" role="img" aria-label="Interactive graph of your team, its code and the conference agenda"></div>
+    <div id="net" role="img" aria-label="Interactive graph of your team, its code and the conference agenda, laid out in columns from people to speakers"></div>
     <div id="emptyg"><div class="box"><h2>The graph is empty</h2>
       <p>It fills in as you publish an agenda and connect your team.</p>
       <div class="row"><a class="btn small" href="/organizer" target="_top">Publish an agenda</a><a class="btn small sun" href="/team" target="_top">Connect a team</a></div></div></div>
@@ -47,12 +65,18 @@
   <aside>
     <h1>Team graph</h1>
     <p class="sub">Every answer is a path. The highlighted one is the latest.</p>
+    <input id="find" type="search" placeholder="Find a person, repo, session…" aria-label="Find in the graph" autocomplete="off">
+    <div id="findinfo" role="status"></div>
+    <div id="detail" class="detail" hidden aria-live="polite"></div>
     <div id="title"></div>
     <div id="paths"><div class="hint">Ask Crew a question, or tap a door, and its path lights up here.</div></div>
     <div class="legend" id="legend" aria-label="Legend"></div>
     <div id="stats" role="status"></div>
-    <button id="focus" class="btn ghost small" type="button" aria-pressed="true"></button>
-    <p class="hint" style="margin-top:16px">Drag to move, scroll to zoom, hover a dot for its name.</p>
+    <div class="tools">
+      <button id="focus" class="btn ghost small" type="button" aria-pressed="true"></button>
+      <button id="fit" class="btn ghost small" type="button">Fit to screen</button>
+    </div>
+    <p class="hint" style="margin-top:16px">Columns run from people to speakers. Hover a box to see what it connects to, click it to pin that. Scroll to zoom, drag the background to pan.</p>
   </aside>
 </div>
 <script src="/static/crew.js"></script>
@@ -60,48 +84,212 @@
 if (window.top === window) { document.body.classList.add("top-level"); Crew.nav("/viz"); }
 const COLORS = { Person:"#FFC53D", Repo:"#8CC1FF", Package:"#6FDCC4", Topic:"#C4B5FD", Session:"#FF9A8C", Speaker:"#FFB870",
                  Note:"#C9E3FF", Source:"#D5D9E8", Digest:"#B9BFD8" };
-const INK = "#161A33", DIM = "rgba(88,96,128,0.22)";
+const INK = "#161A33", BRAIN = "#5B45F5", FADED = "#EEF0F8", EDGE = "#BCC2DA", EDGE_DIM = "#E3E6F1";
+
+// Layout: one column per kind of thing, so the story reads left to right: people -> their code -> the packages and
+// topics that bridge to the agenda -> sessions -> who presents them. Nothing is positioned by physics, so nothing overlaps.
+const LANES = ["People", "Repos & notes", "Packages & topics", "Sessions", "Speakers & sources"];
+const COL_OF = { Person:0, Repo:1, Note:1, Package:2, Topic:2, Session:3, Speaker:4, Source:4, Digest:4 };
+const TYPE_RANK = { Person:0, Repo:0, Note:1, Package:0, Topic:1, Session:0, Speaker:0, Source:1, Digest:2 };
+const W = 196, SUBW = W + 14, GAP = 120, PER = 40;
+const VERB = { OWNS:["owns", "owned by"], DEPENDS_ON:["depends on", "used by"], TAGGED:["tagged", "tag of"], INTERESTED_IN:["interested in", "wanted by"],
+  COVERS:["covers", "covered by"], MENTIONS:["mentions", "mentioned by"], PRESENTS:["presents", "presented by"], ASSIGNED_TO:["assigned to", "assigned"],
+  ATTENDED:["attended", "attended by"], WROTE:["wrote", "written by"], ABOUT:["about", "subject of"], ABOUT_TOPIC:["about topic", "topic of"],
+  CITES:["cites", "cited by"] };
+// Cut labels by their drawn width, not their length, so wide letters never wrap a box onto a second line.
+const measure = document.createElement("canvas").getContext("2d");
+measure.font = "12px system-ui, sans-serif";
+function short(s) {
+  const max = W - 28 - 6;
+  if (measure.measureText(s).width <= max) return s;
+  let n = s.length;
+  while (n > 1 && measure.measureText(s.slice(0, n).trimEnd() + "…").width > max) n--;
+  return s.slice(0, n).trimEnd() + "…";
+}
+const $ = id => document.getElementById(id);
+
 const nodes = new vis.DataSet(), edges = new vis.DataSet();
-const network = new vis.Network(document.getElementById("net"), { nodes, edges }, {
-  nodes: { shape:"dot", size:10, font:{ color:INK, size:12, strokeWidth:4, strokeColor:"#ffffff", face:"system-ui" } },
-  edges: { arrows:{ to:{ enabled:true, scaleFactor:0.4 } }, color:{ color:"#AEB5D0" }, width:1.2,
-           font:{ color:"#586080", size:10, strokeWidth:3, strokeColor:"#ffffff", align:"middle" }, smooth:{ type:"continuous" } },
-  physics: { stabilization:{ iterations:200 }, barnesHut:{ gravitationalConstant:-6000, springLength:120 } },
-  interaction: { hover:true },
+const network = new vis.Network($("net"), { nodes, edges }, {
+  nodes: { shape:"box", margin:{ top:6, bottom:6, left:8, right:8 }, borderWidth:1.5, chosen:false,
+           widthConstraint:{ minimum:W - 28 }, font:{ color:INK, size:12, face:"system-ui", align:"left" }, shapeProperties:{ borderRadius:6 } },
+  edges: { arrows:{ to:{ enabled:true, scaleFactor:0.4 } }, width:1, chosen:false, smooth:{ enabled:true, type:"cubicBezier", forceDirection:"horizontal", roundness:0.6 },
+           font:{ color:"#3C4468", size:11, strokeWidth:4, strokeColor:"#ffffff", align:"middle" } },
+  layout: { improvedLayout:false },
+  physics: { enabled:false },
+  interaction: { hover:true, dragNodes:false, hoverConnectedEdges:false, selectConnectedEdges:false, tooltipDelay:250, zoomSpeed:0.6 },
 });
-document.getElementById("legend").innerHTML =
-  Object.entries(COLORS).map(([k, c]) => `<span class="node" style="background:${c}">${k}</span>`).join("");
+$("legend").innerHTML = Object.entries(COLORS).map(([k, c]) => `<span class="node" style="background:${c}">${k}</span>`).join("");
 
 let graphSig = "", lastHighlight = 0, hot = { nodes:new Set(), edges:new Set() };
+let raw = { nodes:[], edges:[] }, byId = new Map(), adj = new Map(), place = new Map(), lanes = [], box = null;
+let selId = null, hoverId = null, matches = null, autoFit = true;
 
-function styleNode(n) {
-  const isHot = hot.nodes.has(n.id), anyHot = hot.nodes.size > 0;
-  const c = COLORS[n.label] || "#D5D9E8";
-  return { id:n.id, label:n.name, title:`${n.label}: ${n.name}`,
-           color:{ background: anyHot && !isHot ? "#E4E7F3" : c, border: isHot ? INK : (anyHot ? "#E4E7F3" : INK) },
-           size: isHot ? 18 : (n.label === "Person" ? 14 : 9), borderWidth: isHot ? 4 : 1.5,
-           font:{ color: anyHot && !isHot ? "rgba(22,26,51,0.3)" : INK, size: isHot ? 14 : 11 } };
+// Order each column so connected things sit near each other: types stay grouped, then a few barycenter sweeps
+// (sort by the average position of the neighbours) pull linked boxes level and cut the crossings.
+function layout(g, sweeps = 4) {
+  const cols = LANES.map(() => []);
+  g.nodes.forEach(n => cols[COL_OF[n.label] ?? 4].push(n));
+  adj = new Map(g.nodes.map(n => [n.id, []]));
+  g.edges.forEach(e => { if (adj.has(e.src) && adj.has(e.dst) && e.src !== e.dst) { adj.get(e.src).push(e.dst); adj.get(e.dst).push(e.src); } });
+  const rank = n => TYPE_RANK[n.label] ?? 3, byName = (a, b) => a.name.localeCompare(b.name);
+  cols.forEach(c => c.sort((a, b) => rank(a) - rank(b) || byName(a, b)));
+  const pos = new Map();
+  const setPos = c => c.forEach((n, i) => pos.set(n.id, c.length > 1 ? i / (c.length - 1) : 0.5));
+  cols.forEach(setPos);
+  const sweep = c => {
+    const bc = new Map(c.map(n => {
+      const nb = adj.get(n.id).map(id => pos.get(id)).filter(v => v !== undefined);
+      return [n.id, nb.length ? nb.reduce((a, b) => a + b, 0) / nb.length : pos.get(n.id)];
+    }));
+    c.sort((a, b) => rank(a) - rank(b) || bc.get(a.id) - bc.get(b.id) || byName(a, b));
+    setPos(c);
+  };
+  for (let it = 0; it < sweeps; it++) (it % 2 ? [...cols].reverse() : cols).forEach(sweep);
+
+  // Long columns wrap into side-by-side sub-columns so the whole graph still fits a screen.
+  const per = cols.map(c => Math.ceil(c.length / Math.max(1, Math.ceil(c.length / PER))));
+  const tallest = Math.max(1, ...per);
+  const ROW = tallest <= 20 ? 50 : tallest <= 30 ? 42 : 36;
+  place = new Map(); lanes = [];
+  let x = 0;
+  cols.forEach((c, ci) => {
+    if (!c.length) return;
+    const subs = Math.ceil(c.length / per[ci]);
+    c.forEach((n, i) => place.set(n.id, { x: x + Math.floor(i / per[ci]) * SUBW + W / 2, y: ((i % per[ci]) - (tallest - 1) / 2) * ROW }));
+    const width = subs * SUBW - 14;
+    lanes.push({ label:LANES[ci], count:c.length, x0:x - 14, w:width + 28 });
+    x += width + GAP;
+  });
+  const half = ((tallest - 1) / 2) * ROW;
+  box = { top: -half - 78, bottom: half + 36 };
 }
-function styleEdge(e) {
-  const isHot = hot.edges.has(e.id);
-  return { id:e.id, from:e.src, to:e.dst, label: isHot ? e.type : "",
-           color:{ color: isHot ? "#5B45F5" : "#AEB5D0" }, width: isHot ? 4 : 1.2 };
+
+network.on("beforeDrawing", ctx => {
+  if (!lanes.length || !box) return;
+  const scale = network.getScale();
+  lanes.forEach(l => {
+    ctx.beginPath(); ctx.roundRect(l.x0, box.top, l.w, box.bottom - box.top, 14);
+    ctx.fillStyle = "#F4F6FC"; ctx.fill(); ctx.lineWidth = 1 / scale; ctx.strokeStyle = "#E1E5F2"; ctx.stroke();
+    const text = `${l.label.toUpperCase()}  ${l.count}`;
+    let fs = Math.min(26, Math.max(13, 12 / scale));
+    ctx.font = `700 ${fs}px system-ui, sans-serif`;
+    while (fs > 8 && ctx.measureText(text).width > l.w - 24) { fs -= 1; ctx.font = `700 ${fs}px system-ui, sans-serif`; }
+    ctx.fillStyle = "#586080"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillText(text, l.x0 + 14, box.top + 8 + fs + 6);
+  });
+});
+
+// What is in focus right now. Priority: a pinned box, then the hovered box, then a search, then the latest answer.
+function focusSet() {
+  const id = selId || hoverId;
+  if (id && adj.has(id)) return { kind:"node", id, ids:new Set([id, ...adj.get(id)]) };
+  if (matches && matches.size) return { kind:"find", ids:matches };
+  return null;
 }
-let raw = { nodes:[], edges:[] };
+function styleNode(n, f) {
+  const anyHot = hot.nodes.size > 0;
+  const inFocus = f ? f.ids.has(n.id) : (anyHot ? hot.nodes.has(n.id) : true);
+  const lit = f ? (f.kind === "node" ? n.id === f.id : true) && f.ids.has(n.id) : hot.nodes.has(n.id);
+  const p = place.get(n.id) || { x:0, y:0 };
+  const tip = document.createElement("div"); tip.textContent = `${n.label}: ${n.name}`;
+  return { id:n.id, label:short(n.name), title:tip, x:p.x, y:p.y, fixed:true,
+           color:{ background: inFocus ? (COLORS[n.label] || "#D5D9E8") : FADED, border: inFocus ? INK : "#D5D9E8",
+                   highlight:{ background:COLORS[n.label] || "#D5D9E8", border:INK }, hover:{ background:COLORS[n.label] || "#D5D9E8", border:INK } },
+           borderWidth: lit ? 3 : 1.5, shadow: lit ? { enabled:true, color:INK, x:3, y:3, size:0 } : false,
+           font:{ color: inFocus ? INK : "rgba(22,26,51,0.32)", size:12, face:"system-ui", align:"left" } };
+}
+function styleEdge(e, f) {
+  let on = false, label = "";
+  if (f && f.kind === "node") {
+    on = e.src === f.id || e.dst === f.id;
+    if (on && adj.get(f.id).length <= 8) label = e.type;
+  } else if (!f && hot.edges.size) {
+    on = hot.edges.has(e.id);
+    if (on && hot.edges.size <= 8) label = e.type;
+  }
+  const dim = (f && f.kind === "node" && !on) || (!f && hot.edges.size && !on);
+  return { id:e.id, from:e.src, to:e.dst, label, color:{ color: on ? BRAIN : (dim ? EDGE_DIM : EDGE), highlight:BRAIN, hover:BRAIN },
+           width: on ? 3 : 1, arrows:{ to:{ enabled:true, scaleFactor: on ? 0.6 : 0.4 } } };
+}
 function render() {
-  nodes.update(raw.nodes.map(styleNode));
-  edges.update(raw.edges.map(styleEdge));
+  const f = focusSet();
+  nodes.update(raw.nodes.map(n => styleNode(n, f)));
+  edges.update(raw.edges.map(e => styleEdge(e, f)));
 }
+let rafPending = false;
+function restyle() { if (rafPending) return; rafPending = true; requestAnimationFrame(() => { rafPending = false; render(); }); }
+
+// Details of the pinned box: what it connects to, one click to hop along.
+function showDetail() {
+  const d = $("detail");
+  d.replaceChildren();
+  const n = selId && byId.get(selId);
+  if (!n) { d.hidden = true; return; }
+  d.hidden = false;
+  const head = document.createElement("div"); head.className = "dhead";
+  const chip = document.createElement("span"); chip.className = "node"; chip.style.background = COLORS[n.label] || "#D5D9E8"; chip.textContent = n.label;
+  const name = document.createElement("b"); name.textContent = n.name;
+  const x = document.createElement("button"); x.type = "button"; x.className = "x"; x.setAttribute("aria-label", "Clear selection"); x.textContent = "×";
+  x.onclick = () => select(null);
+  head.append(chip, name, x);
+  const list = document.createElement("ul"); list.className = "drows";
+  const rows = [];
+  raw.edges.forEach(e => {
+    if (e.src === selId && byId.has(e.dst)) rows.push({ v:(VERB[e.type] || [e.type])[0], other:e.dst });
+    else if (e.dst === selId && byId.has(e.src)) rows.push({ v:(VERB[e.type] || [null, e.type])[1], other:e.src });
+  });
+  rows.slice(0, 12).forEach(r => {
+    const li = document.createElement("li"), b = document.createElement("button"), v = document.createElement("span");
+    b.type = "button"; v.className = "v"; v.textContent = r.v;
+    b.append(v, document.createTextNode(byId.get(r.other).name));
+    b.onclick = () => { select(r.other); focusOn(r.other); };
+    li.appendChild(b); list.appendChild(li);
+  });
+  if (rows.length > 12) { const li = document.createElement("li"); li.className = "more"; li.textContent = `+${rows.length - 12} more`; list.appendChild(li); }
+  if (!rows.length) { const li = document.createElement("li"); li.className = "more"; li.textContent = "Nothing connected to this yet."; list.appendChild(li); }
+  d.append(head, list);
+}
+function select(id) { selId = id && byId.has(id) ? id : null; showDetail(); render(); }
+function focusOn(id) { stopAutoFit(); network.focus(id, { scale:Math.max(network.getScale(), 0.9), animation:{ duration:400, easingFunction:"easeInOutQuad" } }); }
+function stopAutoFit() { autoFit = false; }
+function fitAll(animate) { network.fit({ animation: animate ? { duration:500 } : false }); }
+
+network.on("hoverNode", p => { hoverId = p.node; restyle(); });
+network.on("blurNode", () => { hoverId = null; restyle(); });
+network.on("click", p => select(p.nodes.length ? p.nodes[0] : null));
+// Once the person pans or zooms themselves, stop re-fitting the view as the graph grows.
+["wheel", "pointerdown"].forEach(t => $("net").addEventListener(t, stopAutoFit, { capture:true, passive:true }));
+$("fit").onclick = () => { autoFit = true; fitAll(true); };
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (autoFit) fitAll(false); }, 150); });
+
+// Search: matches light up, Enter jumps to the first one.
+const findEl = $("find");
+function runFind() {
+  const q = findEl.value.trim().toLowerCase();
+  matches = null;
+  const order = n => COL_OF[n.label] ?? 4;
+  const hits = q ? raw.nodes.filter(n => (n.name + " " + n.label).toLowerCase().includes(q)).sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name)) : [];
+  if (q) matches = new Set(hits.map(n => n.id));
+  $("findinfo").textContent = !q ? "" : hits.length ? `${hits.length} match${hits.length === 1 ? "" : "es"}. Press Enter to jump to ${hits.length === 1 ? "it" : "the first"}.` : "No match.";
+  render();
+  return hits;
+}
+findEl.addEventListener("input", runFind);
+findEl.addEventListener("keydown", e => {
+  if (e.key === "Enter") { const hits = runFind(); if (hits.length) { select(hits[0].id); focusOn(hits[0].id); } }
+  if (e.key === "Escape") { findEl.value = ""; runFind(); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && selId && document.activeElement !== findEl) select(null); });
+
 // Focus mode (default) shows bridges only: what connects the team's code to the conference.
 let focusMode = true;
 try { focusMode = localStorage.getItem("crew.viz.focus") !== "0"; } catch (e) {}
-const focusBtn = document.getElementById("focus");
+const focusBtn = $("focus");
 function paintFocus() {
   focusBtn.textContent = focusMode ? "Showing bridges only. Show everything" : "Showing everything. Show bridges only";
   focusBtn.setAttribute("aria-pressed", String(focusMode));
 }
 focusBtn.onclick = () => {
-  focusMode = !focusMode; paintFocus(); graphSig = "";
+  focusMode = !focusMode; paintFocus(); graphSig = ""; autoFit = true;
   try { localStorage.setItem("crew.viz.focus", focusMode ? "1" : "0"); } catch (e) {}
   loadGraph();
 };
@@ -110,15 +298,20 @@ async function loadGraph() {
   const mode = focusMode;
   const g = await (await fetch(`/api/graph?focus=${mode ? 1 : 0}`)).json();
   if (mode !== focusMode) return;  // the toggle changed while this was loading: a newer request will draw
-  document.getElementById("emptyg").classList.toggle("show", !g.nodes.length);
+  $("emptyg").classList.toggle("show", !g.nodes.length);
   const sig = g.nodes.map(n => n.id).sort().join(",") + "|" + g.edges.map(e => e.id).sort().join(",");
   if (sig === graphSig) return;
-  graphSig = sig; raw = g;
+  graphSig = sig; raw = g; byId = new Map(g.nodes.map(n => [n.id, n]));
   const ids = new Set(g.nodes.map(n => n.id)), eids = new Set(g.edges.map(e => e.id));
   nodes.remove(nodes.getIds().filter(id => !ids.has(id)));
   edges.remove(edges.getIds().filter(id => !eids.has(id)));
-  render();
-  document.getElementById("stats").textContent = g.total && g.total.nodes !== g.nodes.length
+  layout(g);
+  if (selId && !byId.has(selId)) selId = null;
+  if (hoverId && !byId.has(hoverId)) hoverId = null;
+  showDetail();
+  if (matches) runFind(); else render();
+  if (autoFit && g.nodes.length) fitAll(false);
+  $("stats").textContent = g.total && g.total.nodes !== g.nodes.length
     ? `${g.nodes.length} of ${g.total.nodes} nodes, ${g.edges.length} edges`
     : `${g.nodes.length} nodes, ${g.edges.length} edges`;
 }
@@ -128,14 +321,14 @@ async function loadHighlight() {
   lastHighlight = h.at;
   hot = { nodes:new Set(), edges:new Set() };
   h.paths.forEach(p => { p.nodes.forEach(n => hot.nodes.add(n.id)); p.edges.forEach(e => hot.edges.add(e.id)); });
-  document.getElementById("title").textContent = h.title;
-  const box = document.getElementById("paths");
-  box.innerHTML = h.paths.length
+  $("title").textContent = h.title;
+  const list = $("paths");
+  list.innerHTML = h.paths.length
     ? h.paths.map(p => `<div class="path"></div>`).join("")
     : `<div class="hint">No path found, and that's the answer.</div>`;
-  box.querySelectorAll(".path").forEach((el, i) => el.textContent = h.paths[i].text);
+  list.querySelectorAll(".path").forEach((el, i) => el.textContent = h.paths[i].text);
   await loadGraph(); render();
-  if (hot.nodes.size) network.fit({ nodes:[...hot.nodes].filter(id => nodes.get(id)), animation:{ duration:600 } });
+  if (hot.nodes.size) { autoFit = false; network.fit({ nodes:[...hot.nodes].filter(id => nodes.get(id)), animation:{ duration:600 } }); }
 }
 async function tick() { try { await loadGraph(); await loadHighlight(); } catch (e) { console.warn(e); } }
 tick(); setInterval(tick, 1500);

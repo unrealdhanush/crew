@@ -20,7 +20,7 @@ graph. Keep Crew on `127.0.0.1` unless it's set (see [Configuration](./configura
 | `/organizer` | Publish the agenda |
 | `/stickers` | Printable NFC/QR door stickers |
 | `/team` | Team onboarding and live build |
-| `/viz` | Live graph view; highlights the latest answer's paths. Shows bridges only by default, with a toggle for everything |
+| `/viz` | Live graph view in fixed columns (people, repos, packages and topics, sessions, speakers); highlights the latest answer's paths, with hover, click-to-pin, search and fit. Shows bridges only by default, with a toggle for everything |
 | `/tap?s=<session id>` | What a door sticker opens: check-in and note |
 | `/sim` | Tap simulator for demos |
 
