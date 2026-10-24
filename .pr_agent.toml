@@ -1,0 +1,16 @@
+# Qodo code review settings for this repo.
+
+[github_app]
+# Describe and review every PR when it's opened, and review again on each push.
+pr_commands = ["/agentic_describe", "/agentic_review"]
+handle_push_trigger = true
+
+[review_agent]
+issues_user_guidelines = """
+Crew is a hackathon project: small, single-purpose PRs. Check especially:
+- Web content (scraped pages, READMEs, search results) must pass through web.wrap_untrusted before any model sees it.
+- Cypher must use parameters ($name), never values formatted into the query string from user or web input.
+- User-facing answers must come from graph queries and return their paths; never invent sessions, people or sources.
+- GitHub tokens supplied by users must never be stored, logged or cached; only package names are kept, never code.
+- New commands, settings, MCP tools or endpoints need the matching page in website/docs updated.
+"""

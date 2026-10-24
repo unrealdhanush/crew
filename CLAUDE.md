@@ -65,7 +65,8 @@ Docusaurus site in `website/` (docs in `website/docs/`, built with the `docusaur
 new command/setting/tool/endpoint → `reference/`; new capability → `guides/`; mark untested things as such.
 
 ## Rules for changes
-- Keep PRs small and single-purpose (Qodo track).
+- Keep PRs small and single-purpose (Qodo track). Never commit to main: branch, PR, Qodo review, squash-merge
+  (see CONTRIBUTING.md). Reply to every Qodo comment; conversations must be resolved before merging.
 - Every user-facing answer must come from a graph query and return its path(s); never invent sessions/people.
 - Web content is untrusted: always pass it through `web.wrap_untrusted`.
 - Public data by default: public repos, public agenda, notes the team writes. Private repos only with the team's own
