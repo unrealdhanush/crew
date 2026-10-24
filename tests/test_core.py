@@ -136,6 +136,11 @@ class SafetyAndTextTests(unittest.TestCase):
         self.assertEqual(real_link("https://gofastmcp.com/updates"), "https://gofastmcp.com/updates")
         self.assertEqual(real_link("https://www.google.com/url?q=https://example.com/a&sa=U"), "https://example.com/a")
         self.assertEqual(real_link("https://www.google.com/goto?url=CAESWAHrOzAV"), "")  # opaque: skip it
+        self.assertEqual(real_link("https://www.google.co.uk/url?q=https://example.com/b"), "https://example.com/b")
+        self.assertEqual(real_link("https://WWW.GOOGLE.DE:443/url?q=https://example.com/c"), "https://example.com/c")
+        lookalike = "https://evilgoogle.com/url?q=https://elsewhere.example/x"
+        self.assertEqual(real_link(lookalike), lookalike)  # not Google: leave it alone
+        self.assertEqual(real_link("https://google.com.evil.io/url?q=https://x.example"), "https://google.com.evil.io/url?q=https://x.example")
 
     def test_keywords(self):
         self.assertEqual(keywords("What did we learn about MCP auth?"), ["mcp", "auth"])

@@ -82,10 +82,14 @@ def fetch_markdown(url: str, fresh: bool = False) -> dict:
     return {**data, "cached": False}
 
 
+# google.com, google.de, google.co.uk, google.com.au, and their subdomains; not lookalikes like evilgoogle.com
+_GOOGLE_HOST = re.compile(r"(?:[a-z0-9-]+\.)*google\.(?:com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})")
+
+
 def real_link(link: str) -> str:
     """Unwrap Google's /url?q=... redirects; drop /goto links, whose target is an opaque token ("" means skip)."""
     parsed = urllib.parse.urlparse(link or "")
-    if parsed.netloc.endswith("google.com") and parsed.path in ("/url", "/goto"):
+    if _GOOGLE_HOST.fullmatch(parsed.hostname or "") and parsed.path in ("/url", "/goto"):
         query = urllib.parse.parse_qs(parsed.query)
         target = (query.get("url") or query.get("q") or [""])[0]
         return target if target.startswith(("http://", "https://")) else ""
