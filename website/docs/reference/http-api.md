@@ -16,7 +16,7 @@ None of these endpoints check who's calling, including `/api/reset`, which delet
 
 | Path | Page |
 |---|---|
-| `/` | Home: the pitch, live counts, clear graph |
+| `/` | Home: the pitch, live setup status with the next step, example questions, and clear graph (under Start over) |
 | `/organizer` | Publish the agenda |
 | `/stickers` | Printable NFC/QR door stickers |
 | `/team` | Team onboarding and live build |

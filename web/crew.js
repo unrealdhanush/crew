@@ -1,4 +1,12 @@
 // Shared helpers for Crew's pages.
+// Fonts load without blocking the page, so a bad venue network can't stall it. Without them the system font is used.
+try {
+  const f = document.createElement("link");
+  f.rel = "stylesheet";
+  f.href = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap";
+  document.head.appendChild(f);
+} catch (e) { /* fonts are optional */ }
+
 const Crew = (() => {
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 
@@ -7,6 +15,7 @@ const Crew = (() => {
     const opts = body === undefined ? {} : { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(body) };
     try {
       const r = await fetch(url, opts);
+      if (r.status === 401) return { error:"Crew needs its access token. Open any Crew page once with ?token=<token> on the end of the address, then come back." };
       return await r.json();
     } catch (e) {
       return { error:"Can't reach Crew. Check that `crew serve` is running, then try again." };

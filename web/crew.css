@@ -1,6 +1,5 @@
 /* Crew app styles, shared by every page. Look: conference badges and door stickers.
    Thick ink outlines and hard shadows on things you press; quiet white panels everywhere else. */
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&display=swap");
 
 :root {
   --paper:#F3F5FB; --card:#FFFFFF; --soft:#E9ECF7; --ink:#161A33; --muted:#586080; --line:#D9DDEE;

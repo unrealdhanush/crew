@@ -122,7 +122,7 @@
         <rect x="4" y="12" width="104" height="160" rx="14" fill="#fff" stroke="#161A33" stroke-width="3"/>
         <path d="M4 26 a14 14 0 0 1 14 -14 h76 a14 14 0 0 1 14 14 v28 h-104z" fill="#FF6B57" stroke="#161A33" stroke-width="3"/>
         <rect x="40" y="22" width="32" height="8" rx="4" fill="#F3F5FB" stroke="#161A33" stroke-width="2"/>
-        <text x="56" y="96" text-anchor="middle" font-size="19" font-weight="800" fill="#161A33">dhanush</text>
+        <text x="56" y="96" text-anchor="middle" font-size="19" font-weight="800" fill="#161A33">dan</text>
         <text x="56" y="124" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">agents</text>
         <text x="56" y="144" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">mcp</text></g>
       <g transform="rotate(3 205 90)"><rect x="154" y="4" width="104" height="160" rx="14" fill="#161A33" transform="translate(4 4)"/>
@@ -266,7 +266,12 @@ function cell(id, done, title, text) {
 document.querySelectorAll("#status .tick").forEach((t, i) => t.dataset.n = String(i + 1));
 async function loadStats() {
   const s = await Crew.api("/api/stats");
-  if (s.error) { $("status").querySelectorAll(".cell span:not(.tick)").forEach(x => x.textContent = "Can't reach Crew"); return; }
+  if (s.error) {
+    const msg = /access token/.test(s.error) ? "Needs access token: add ?token=… to the address" : "Can't reach Crew";
+    $("status").querySelectorAll(".cell span:not(.tick)").forEach(x => x.textContent = msg);
+    $("next").textContent = "Retry"; $("next").href = "/";
+    return;
+  }
   const hasAgenda = s.sessions > 0, hasTeam = s.persons > 0;
   cell("s-agenda", hasAgenda, "Agenda", hasAgenda ? `${s.sessions} sessions published` : `Not published yet`);
   cell("s-team", hasTeam, "Team", hasTeam ? `${s.persons} ${s.persons === 1 ? "teammate" : "teammates"}, ${s.repos} ${s.repos === 1 ? "repo" : "repos"} read` : `Nobody added yet`);
@@ -292,14 +297,14 @@ const ASK = [
     a:"One. billing-api uses stripe-node, a session is about it, and no one is on that session. Crew flags it before the day starts. An empty result would prove everything is covered.",
     path:[N("Person","ana"), "-OWNS->", N("Repo","billing-api"), "-DEPENDS_ON->", N("Package","stripe-node"), "<-MENTIONS-", N("Session","Webhooks without the 3am pages")] },
   { tab:"Ripple", hint:"Who does a change hit?", q:"fastmcp 3 drops SSE. Who does that break?",
-    a:"dhanush, through agent-hub. The note and the release notes it cites travel with the answer.",
-    path:[N("Note","fastmcp 3 drops SSE"), "-MENTIONS->", N("Package","fastmcp"), "<-DEPENDS_ON-", N("Repo","agent-hub"), "<-OWNS-", N("Person","dhanush")] },
+    a:"dan, through agent-hub. The note and the release notes it cites travel with the answer.",
+    path:[N("Note","fastmcp 3 drops SSE"), "-MENTIONS->", N("Package","fastmcp"), "<-DEPENDS_ON-", N("Repo","agent-hub"), "<-OWNS-", N("Person","dan")] },
   { tab:"Why", hint:"Why am I in this room?", q:"Why am I in this session?",
     a:"Because a library you depend on is the topic. Crew shows the exact link instead of just saying it's relevant.",
-    path:[N("Person","dhanush"), "-OWNS->", N("Repo","openai-agents-python"), "-DEPENDS_ON->", N("Package","mcp"), "<-MENTIONS-", N("Session","Shipping MCP servers to production")] },
+    path:[N("Person","dan"), "-OWNS->", N("Repo","openai-agents-python"), "-DEPENDS_ON->", N("Package","mcp"), "<-MENTIONS-", N("Session","Shipping MCP servers to production")] },
   { tab:"Team memory", hint:"What did we learn?", q:"What did we learn about MCP?",
     a:"Streamable HTTP replaces SSE in fastmcp 3. The answer cites the teammate's note [N1] and the release notes [S1], and uses nothing else.",
-    path:[N("Person","dhanush"), "-WROTE->", N("Note","fastmcp 3 drops SSE"), "-CITES->", N("Source","fastmcp 3.0 release notes")] },
+    path:[N("Person","dan"), "-WROTE->", N("Note","fastmcp 3 drops SSE"), "-CITES->", N("Source","fastmcp 3.0 release notes")] },
 ];
 const tabs = $("tabs"), panel = $("panel");
 tabs.innerHTML = ASK.map((x, i) => `<button role="tab" id="t${i}" aria-controls="panel" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">
