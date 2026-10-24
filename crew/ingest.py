@@ -415,7 +415,8 @@ Return {"sessions": [...]} where each session is:
  "speakers": [{"name": str, "company": str or null}],
  "topics": [3-6 short lowercase tags, e.g. "agents", "supply-chain-security"],
  "packages": [libraries, tools or products the session is about, lowercase]}
-Only include real sessions that appear in the text. Never invent times or speakers.
+Only include real sessions that appear in the text. Never invent times or speakers. Skip polls, vote candidates
+and proposals that aren't scheduled yet.
 If the page gives a date only once, apply it to the sessions under it.
 Prefer these existing names when they fit (they are what the team depends on):
 packages: {packages}
