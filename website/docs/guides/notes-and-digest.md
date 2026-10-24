@@ -4,8 +4,9 @@ sidebar_position: 6
 description: Turn one-line notes into cited knowledge and a digest for the people at home.
 ---
 
-:::warning Not yet verified
-Everything on this page calls OpenAI (and Bright Data for sources) and hasn't been run against those services yet.
+:::note Verification
+Notes, team memory and the digest were tested against OpenAI on Oct 24. Fetching a note's sources needs Bright Data
+zones and hasn't been run yet; without them, notes still save, link and ripple, just with no sources.
 :::
 
 ## Notes

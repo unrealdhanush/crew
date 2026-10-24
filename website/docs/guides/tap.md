@@ -18,9 +18,9 @@ natively, so there's no app to install.
 
 The graph view lights up the check-in and, after a note, the note's links.
 
-:::warning Not yet verified
-Check-ins are tested. Notes need `OPENAI_API_KEY` (and `BRIGHTDATA_API_KEY` for fetching sources) and haven't been
-run against those services yet.
+:::note Verification
+Check-ins are tested, and notes were tested against OpenAI. Fetching a note's sources needs Bright Data zones and
+hasn't been run yet.
 :::
 
 ## Demo without stickers: `/sim`

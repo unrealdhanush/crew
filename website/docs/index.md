@@ -72,6 +72,6 @@ flowchart LR
 
 :::warning Status
 Built for the Patch the Conference hackathon (Oct 24, 2026). Ingestion, planning, blind spots, ripple, check-ins and
-the web app are tested against a real FalkorDB and real GitHub repos. Features that call OpenAI, Bright Data or
-TrueForge haven't run against those services yet, and their pages say so.
+the web app are tested against a real FalkorDB and real GitHub repos; notes, team memory, the digest and Crew
+Scout are tested against OpenAI. Bright Data scraping and TrueForge agents haven't run yet, and their pages say so.
 :::

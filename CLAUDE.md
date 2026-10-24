@@ -45,7 +45,8 @@ Person-WROTE->Note-ABOUT->Session, Note-MENTIONS->Package, Note-ABOUT_TOPIC->Top
 
 ## Status
 - Tested against real FalkorDB and GitHub: ingestion, plan, blind spots, ripple, why, tap check-in, web app, builds.
-- NOT yet run against OpenAI / Bright Data / TrueForge: live agenda, notes, ask, digest, Crew Scout, forge-setup.
+- Tested against OpenAI (Oct 24): notes, ask_team, digest, Crew Scout direct mode.
+- NOT yet run: Bright Data (account had no zones), TrueForge agents (forge-setup, Scout in TrueForge).
 - Unit tests: `uv run python -m unittest discover tests`.
 
 ## Commands

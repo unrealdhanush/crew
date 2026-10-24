@@ -3,7 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from crew.graph import path_text
+from crew.graph import display_name, path_text
+from crew.scout import valid_evidence
 from crew.ingest import (norm_pkg, norm_topic, parse_go_mod, parse_manifest, parse_package_json, parse_package_json_dev,
                          parse_pyproject, parse_requirements, parse_sbom, scan_dir, slug, to_minutes, upload_repo)
 from crew.memory import keywords, source_context
@@ -141,6 +142,23 @@ class SafetyAndTextTests(unittest.TestCase):
         self.assertEqual(out.count("</untrusted_web_content>"), 1)
         self.assertTrue(out.endswith("</untrusted_web_content>"))  # everything from the page stays inside
         self.assertNotIn("User_Note", out)
+
+    def test_note_display_name_is_a_quote(self):
+        self.assertEqual(display_name({"nid": "03c8589869", "text": "SSE is gone"}), '"SSE is gone"')
+        self.assertTrue(display_name({"nid": "x", "text": "a " * 40}).endswith('…"'))
+        self.assertEqual(display_name({"nid": "03c8589869"}), "03c8589869")
+
+    def test_scout_evidence_must_be_a_sentence(self):
+        readme = "# wmata_mcp\n\nAn **MCP** server for Washington Metro train times."
+        self.assertTrue(valid_evidence("An MCP server for Washington Metro train times.", readme))
+        self.assertFalse(valid_evidence("# wmata_mcp", readme))                       # heading
+        self.assertFalse(valid_evidence("An MCP server for London buses.", readme))   # not in the README
+        long_heading = "# This project provides developer tools\n\nIt runs locally. It needs no account at all."
+        self.assertFalse(valid_evidence("This project provides developer tools", long_heading))  # 5-word heading
+        self.assertFalse(valid_evidence("needs no account at all", long_heading))                # fragment
+        self.assertTrue(valid_evidence("It needs no account at all.", long_heading))              # whole sentence
+        self.assertTrue(valid_evidence("It runs locally. It needs no account at all.", long_heading))  # consecutive
+        self.assertTrue(valid_evidence("Works with every MCP client today.", "- Works with every **MCP** client today."))
 
     def test_path_text(self):
         nodes = [{"id": 1, "name": "ann"}, {"id": 2, "name": "acme/api"}, {"id": 3, "name": "fastmcp"}]

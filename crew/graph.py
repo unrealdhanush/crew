@@ -78,7 +78,7 @@ def reset() -> None:
 
 # ---------- explainability: paths -> JSON the UI and the agent can show ----------
 
-NAME_KEYS = ("handle", "title", "full_name", "name", "url", "nid")
+NAME_KEYS = ("handle", "title", "full_name", "name", "url")
 HIDDEN_PROPS = {"text", "abstract", "summary", "excerpt"}
 
 
@@ -86,7 +86,10 @@ def display_name(props: dict) -> str:
     for key in NAME_KEYS:
         if props.get(key):
             return str(props[key])[:80]
-    return "?"
+    if props.get("text"):  # a Note: show what it says, not its id
+        text = " ".join(str(props["text"]).split())
+        return f'"{text[:40]}…"' if len(text) > 40 else f'"{text}"'
+    return str(props.get("nid") or "?")
 
 
 def node_json(node) -> dict:

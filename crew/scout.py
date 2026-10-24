@@ -92,6 +92,41 @@ def _light_up(title: str, cypher: str, params: dict) -> list[str]:
     return [p["text"] for p in paths]
 
 
+_LIST_ITEM = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+
+
+def readme_sentences(readme: str) -> list[str]:
+    """The README's prose as normalized sentences, in order. Headings are left out; each paragraph and list item is
+    split at sentence ends, so evidence can only be whole sentences."""
+    blocks, current = [], []
+    for line in (readme or "").splitlines():
+        if not line.strip() or line.lstrip().startswith(("#", "```", "|", "<")) or _LIST_ITEM.match(line):
+            if current:
+                blocks.append(" ".join(current))
+                current = []
+            if _LIST_ITEM.match(line):
+                blocks.append(_LIST_ITEM.sub("", line))
+            continue
+        current.append(line.strip())
+    if current:
+        blocks.append(" ".join(current))
+    return [s for block in blocks for s in (_plain(x) for x in _SENTENCE_END.split(block)) if s]
+
+
+def valid_evidence(quote: str, readme: str) -> bool:
+    """One or more whole, consecutive README sentences (5+ words in total), not a heading or a fragment."""
+    plain = _plain(quote)
+    if not 10 <= len(quote) <= 300 or len(plain.split()) < 5:
+        return False
+    sentences = readme_sentences(readme)
+    for start in range(len(sentences)):
+        for end in range(start + 1, min(start + 4, len(sentences) + 1)):
+            if " ".join(sentences[start:end]) == plain:
+                return True
+    return False
+
+
 def tag_repo(full_name: str, topics: list[str], evidence: str) -> dict:
     """Write README-derived topics for a repo. `evidence` must be copied from the README, so every tag can be
     shown with the sentence that justifies it."""
@@ -101,8 +136,8 @@ def tag_repo(full_name: str, topics: list[str], evidence: str) -> dict:
     if not names:
         return {"error": "Give 1-6 topics"}
     quote = (evidence or "").strip()
-    if not 10 <= len(quote) <= 300 or _plain(quote) not in _plain(readme_excerpt(full_name, limit=20000)):
-        return {"error": "evidence must be a sentence copied from the README (10-300 characters)"}
+    if not valid_evidence(quote, readme_excerpt(full_name, limit=20000)):
+        return {"error": "evidence must be a full sentence (5+ words, not a heading) copied from the README"}
     G.q(
         "MATCH (r:Repo {full_name: $r}) UNWIND $topics AS t MERGE (x:Topic {name: t}) "
         "MERGE (r)-[e:TAGGED]->(x) ON CREATE SET e.via = 'readme', e.evidence = $quote",
@@ -143,8 +178,8 @@ def map_goals(handle: str, topics: list[str]) -> dict:
 # ---------- the same job without TrueForge: one direct model call per repo / person ----------
 
 REPO_PROMPT = """You are Crew Scout. From a repo's profile, choose 2-6 topics for what the repo is about.
-Use names from agenda_topics whenever they fit; otherwise short lowercase tags. Copy one sentence from the README,
-exactly as written, as evidence. Return {"topics": [str], "evidence": str}."""
+Use names from agenda_topics whenever they fit; otherwise short lowercase tags. Copy one full sentence (not a
+heading or title) from the README, exactly as written, as evidence. Return {"topics": [str], "evidence": str}."""
 
 GOALS_PROMPT = """You are Crew Scout. Map a teammate's stated conference goals to 1-6 topics.
 Use names from agenda_topics whenever they fit; otherwise short lowercase tags. Return {"topics": [str]}."""
@@ -157,12 +192,16 @@ def auto_tag(progress=_quiet) -> dict:
         if row["profiled"]:
             continue
         profile = repo_profile(row["repo"])
-        if not profile.get("has_readme"):
-            progress(f"{row['repo']}: no README, skipped")
+        if len(_plain(readme_excerpt(row["repo"])).split()) < 5:  # nothing to quote: don't spend model calls
+            progress(f"{row['repo']}: README has no sentences to quote, skipped")
             continue
         progress(f"Scout reading {row['repo']}'s README")
         answer = llm.json_call(REPO_PROMPT, json.dumps(profile))
         result = tag_repo(row["repo"], answer.get("topics"), answer.get("evidence", ""))
+        if result.get("error"):  # one retry with the reason, like the TrueForge agent is told to do
+            retry = dict(profile, rejected_because=result["error"])  # not the old answer: it may echo README text
+            answer = llm.json_call(REPO_PROMPT, json.dumps(retry))
+            result = tag_repo(row["repo"], answer.get("topics"), answer.get("evidence", ""))
         if result.get("error"):
             progress(f"{row['repo']}: {result['error']}", "warn")
         else:
