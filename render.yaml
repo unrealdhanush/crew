@@ -1,0 +1,51 @@
+# Render blueprint: New > Blueprint > pick this repo. Not yet deployed or tested on Render.
+# Crew has no login yet: anyone with the app URL can run builds (spending your API credits) or clear the graph.
+# Add authentication before sharing the app URL. The docs site is safe to make public.
+services:
+  # Documentation (Docusaurus), free static site
+  - type: web
+    name: crew-docs
+    runtime: static
+    buildCommand: cd website && npm ci && npm run build
+    staticPublishPath: website/build
+
+  # Crew server: web app, graph view and MCP endpoint (/mcp). Builds from the repo's Dockerfile.
+  - type: web
+    name: crew
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter            # free instances sleep after ~15 min idle; too slow to wake mid-demo
+    healthCheckPath: /api/stats
+    envVars:
+      - key: CREW_PORT
+        value: "10000"       # Render's default port
+      - key: PORT
+        value: "10000"
+      - key: FALKORDB_HOST
+        fromService: {type: pserv, name: crew-falkordb, property: host}
+      - key: FALKORDB_PORT
+        value: "6379"
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: BRIGHTDATA_UNLOCKER_ZONE
+        value: web_unlocker1
+      - key: BRIGHTDATA_SERP_ZONE
+        value: serp_api1
+      - key: OPENAI_API_KEY      # secrets: entered in Render when the blueprint is applied
+        sync: false
+      - key: BRIGHTDATA_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+
+  # FalkorDB with a persistent disk, reachable only from the Crew service
+  - type: pserv
+    name: crew-falkordb
+    runtime: image
+    image:
+      url: docker.io/falkordb/falkordb:latest
+    plan: starter
+    disk:
+      name: falkordb-data
+      mountPath: /var/lib/falkordb/data
+      sizeGB: 1

@@ -35,3 +35,25 @@ CREW_HOST=0.0.0.0 crew serve
 ```
 
 There's no login (see [HTTP API](../reference/http-api.md)), so only do this on a network you trust.
+
+## Render
+
+`render.yaml` at the repo root is a Render blueprint (New → Blueprint → pick the repo). It creates three services:
+
+| Service | What it is |
+|---|---|
+| `crew-docs` | This documentation, as a free static site |
+| `crew` | The Crew server from the `Dockerfile`, on a paid instance (free ones sleep and take ~1 minute to wake) |
+| `crew-falkordb` | FalkorDB as a private service with a 1 GB disk |
+
+Render asks for `OPENAI_API_KEY`, `BRIGHTDATA_API_KEY` and `GITHUB_TOKEN` when you apply it. For TrueForge, point the
+`crew` connector at `https://<your-crew>.onrender.com/mcp` and run `crew forge-setup` again.
+
+:::danger No login yet
+Crew's endpoints aren't authenticated. Anyone with the app URL can run builds that spend your API credits or clear
+the graph with `/api/reset`. Deploy the docs freely; add authentication before sharing the app URL.
+:::
+
+:::note Not yet tested
+The blueprint hasn't been applied on Render yet.
+:::
