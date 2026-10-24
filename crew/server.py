@@ -189,7 +189,9 @@ class TokenGate:
         from_query = request.query_params.get("token", "")
         bearer = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
         given = from_query or bearer or request.cookies.get("crew_token", "")
-        if not hmac.compare_digest(given.encode(), config.ACCESS_TOKEN.encode()):
+        # A base64 token pasted into a URL unencoded has its "+" turned into spaces; accept that too.
+        candidates = {given, given.replace(" ", "+")}
+        if not any(hmac.compare_digest(c.encode(), config.ACCESS_TOKEN.encode()) for c in candidates):
             return await Response("Crew needs its access token: open this page once with ?token=<token>.",
                                   status_code=401)(scope, receive, send)
         if from_query:  # remember it, and take it out of the address bar

@@ -49,7 +49,8 @@ There's no login (see [HTTP API](../reference/http-api.md)), so only do this on 
 Render asks for `OPENAI_API_KEY`, `BRIGHTDATA_API_KEY` and `GITHUB_TOKEN` when you apply it, and generates
 `CREW_ACCESS_TOKEN` (see the `crew` service's Environment). With it set, every request needs the token:
 
-- **Browser or phone:** open `https://<your-crew>.onrender.com/?token=<token>` once; a cookie remembers it.
+- **Browser or phone:** open `https://<your-crew>.onrender.com/?token=<token>` once; a cookie remembers it. Render's
+  generated token is base64; Crew accepts it pasted as-is, but a hex token (`openssl rand -hex 32`) avoids URL encoding.
 - **TrueForge:** edit the `crew` connector to `https://<your-crew>.onrender.com/mcp` with header auth
   `Authorization: Bearer <token>`. Then, from your checkout:
 
