@@ -31,6 +31,9 @@ the machine's network address on `/stickers`.
 **Team memory finds nothing.** The full-text indexes are created by `crew init` (and on server start). Run
 `crew init` once against the graph.
 
+**TrueForge: `Outbound URL blocked for host "127.0.0.1"`.** Start TrueForge with
+`OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'` so it may call Crew's local MCP endpoint.
+
 **TrueForge doesn't ask before publishing the digest.** Re-run `crew forge-setup`; it sets approval on
 `publish_digest`. Agents created by hand in the UI need the shield turned on for that tool.
 

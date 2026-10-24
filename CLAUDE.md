@@ -47,7 +47,9 @@ Person-WROTE->Note-ABOUT->Session, Note-MENTIONS->Package, Note-ABOUT_TOPIC->Top
 - Tested against real FalkorDB and GitHub: ingestion, plan, blind spots, ripple, why, tap check-in, web app, builds.
 - Tested against OpenAI (Oct 24): notes, ask_team, digest, Crew Scout direct mode.
 - Tested against Bright Data (Oct 24): Web Unlocker fetch + SERP search for note sources.
-- NOT yet run: live agenda scrape + extraction, TrueForge agents (forge-setup, Scout in TrueForge).
+- Tested in TrueForge (Oct 24, openai/gpt-5-4-mini): forge-setup, Scout in TrueForge (and via /team hand-off),
+  publish_digest approval pause. Start TrueForge with OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'.
+- NOT yet run: live agenda scrape + extraction.
 - Unit tests: `uv run python -m unittest discover tests`.
 
 ## Commands

@@ -1,8 +1,10 @@
 """Pure-logic tests (no database, network or model needed): python -m unittest discover tests"""
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
+from crew.forge import SCOUT_TOOLS, _spec, _tool_and_args
 from crew.graph import display_name, path_text
 from crew.scout import valid_evidence
 from crew.ingest import (norm_pkg, norm_topic, parse_go_mod, parse_manifest, parse_package_json, parse_package_json_dev,
@@ -175,6 +177,18 @@ class SafetyAndTextTests(unittest.TestCase):
         self.assertTrue(valid_evidence("It needs no account at all.", long_heading))              # whole sentence
         self.assertTrue(valid_evidence("It runs locally. It needs no account at all.", long_heading))  # consecutive
         self.assertTrue(valid_evidence("Works with every MCP client today.", "- Works with every **MCP** client today."))
+
+    def test_forge_agent_specs(self):
+        scout = _spec("x", SCOUT_TOOLS)["mcp_servers"][0]
+        self.assertEqual(scout["enable_tools"], ["team_repos", "repo_profile", "tag_repo", "map_goals"])
+        self.assertTrue(scout["preload"])
+        self.assertEqual(scout["require_approval_for_tools"], ["publish_digest"])
+        self.assertNotIn("enable_tools", _spec("x")["mcp_servers"][0])  # teammates: all tools
+
+    def test_unwraps_trueforge_call_tool(self):
+        name, args = _tool_and_args("call_tool", '{"mcp_server":"crew","tool_name":"team_repos","input":{"a":1}}')
+        self.assertEqual((name, json.loads(args)), ("team_repos", {"a": 1}))
+        self.assertEqual(_tool_and_args("crew__tag_repo", "{}"), ("tag_repo", "{}"))
 
     def test_path_text(self):
         nodes = [{"id": 1, "name": "ann"}, {"id": 2, "name": "acme/api"}, {"id": 3, "name": "fastmcp"}]
