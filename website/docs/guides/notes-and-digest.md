@@ -5,8 +5,9 @@ description: Turn one-line notes into cited knowledge and a digest for the peopl
 ---
 
 :::note Verification
-Notes, team memory and the digest were tested against OpenAI on Oct 24. Fetching a note's sources needs Bright Data
-zones and hasn't been run yet; without them, notes still save, link and ripple, just with no sources.
+Tested end to end on Oct 24 against OpenAI and Bright Data: a note found and fetched its release notes, and
+`ask_team` answered with citations to the note and both sources. If Bright Data is unavailable, notes still save,
+link and ripple, just without sources.
 :::
 
 ## Notes
@@ -20,8 +21,8 @@ crew note <handle> "fastmcp 3 drops SSE, migrate to streamable http" --session "
 Crew then:
 1. links the note to its author and the session,
 2. extracts the packages and topics it mentions, and any announced breaking changes,
-3. fetches sources: links in the note, otherwise a Bright Data search for the official docs or release notes,
-   summarized and linked as `Note -CITES-> Source`,
+3. fetches sources: links in the note, otherwise a Bright Data search for the official docs or release notes
+   (Google redirect links are unwrapped or skipped), summarized and linked as `Note -CITES-> Source`,
 4. for each breaking change, runs **ripple**: which of the team's repos depend on that package, and who owns them.
 
 ## Team memory
