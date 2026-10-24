@@ -7,7 +7,7 @@ from pathlib import Path
 
 from crew.forge import SCOUT_TOOLS, _spec, _tool_and_args
 from crew import ingest
-from crew.graph import display_name, path_text
+from crew.graph import display_name, focus, path_text
 from crew.scout import valid_evidence
 from crew.ingest import (norm_pkg, norm_topic, parse_go_mod, parse_manifest, parse_package_json, parse_package_json_dev,
                          parse_pyproject, parse_requirements, parse_sbom, scan_dir, slug, to_minutes, upload_repo)
@@ -209,6 +209,21 @@ class SafetyAndTextTests(unittest.TestCase):
         name, args = _tool_and_args("call_tool", '{"mcp_server":"crew","tool_name":"team_repos","input":{"a":1}}')
         self.assertEqual((name, json.loads(args)), ("team_repos", {"a": 1}))
         self.assertEqual(_tool_and_args("crew__tag_repo", "{}"), ("tag_repo", "{}"))
+
+    def test_focus_keeps_bridges_and_drops_dead_ends(self):
+        n = lambda i, label: {"id": i, "label": label}
+        nodes = [n(1, "Person"), n(2, "Repo"), n(3, "Package"), n(4, "Package"), n(5, "Session"), n(6, "Session"),
+                 n(7, "Speaker"), n(8, "Topic"), n(9, "Topic"), n(10, "Source")]
+        e = lambda s, d: {"id": f"{s}-{d}", "src": s, "dst": d}
+        edges = [e(1, 2), e(2, 3), e(5, 3),   # mcp: the repo depends on it and a session mentions it -> bridge
+                 e(2, 4),                    # httpx: only the repo uses it -> dead end
+                 e(6, 8), e(7, 6),           # a session about a topic nobody on the team has, and its speaker
+                 e(1, 9),                    # a goal no session covers
+                 e(5, 10), e(6, 10)]         # the agenda page both sessions came from
+        kept, kept_edges = focus(nodes, edges)
+        self.assertEqual({x["id"] for x in kept}, {1, 2, 3, 5})
+        self.assertEqual({x["id"] for x in kept_edges}, {"1-2", "2-3", "5-3"})
+        self.assertIn(4, {x["id"] for x in focus(nodes, edges, pinned={4})[0]})  # highlighted paths always show
 
     def test_path_text(self):
         nodes = [{"id": 1, "name": "ann"}, {"id": 2, "name": "acme/api"}, {"id": 3, "name": "fastmcp"}]
