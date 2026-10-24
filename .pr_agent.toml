@@ -11,6 +11,8 @@ Crew is a hackathon project: small, single-purpose PRs. Check especially:
 - Web content (scraped pages, READMEs, search results) must pass through web.wrap_untrusted before any model sees it.
 - Cypher must use parameters ($name), never values formatted into the query string from user or web input.
 - User-facing answers must come from graph queries and return their paths; never invent sessions, people or sources.
-- GitHub tokens supplied by users must never be stored, logged or cached; only package names are kept, never code.
+- User-supplied GitHub tokens must never be stored, logged or cached, and source code is never read or stored.
+  What Crew does keep is intentional: package names, repo metadata, README quotes as evidence, and notes with the
+  summaries of the sources they cite.
 - New commands, settings, MCP tools or endpoints need the matching page in website/docs updated.
 """

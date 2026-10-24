@@ -16,10 +16,19 @@ main can't be force-pushed).
 
 ## Setup
 
+Needs [uv](https://docs.astral.sh/uv/), Docker, and Node.js 20+ for the docs.
+
 ```bash
 uv sync                                   # Python env from uv.lock
-docker compose up -d                      # FalkorDB
+docker compose up -d                      # FalkorDB (Colima without the compose plugin: docker-compose up -d)
 cp .env.example .env                      # keys: see website/docs/reference/configuration.md
+npm --prefix website install              # docs dependencies, once
 uv run crew serve
-uv run python -m unittest discover tests  # before every PR
+```
+
+Before every PR:
+
+```bash
+uv run python -m unittest discover tests
+npm --prefix website run build            # fails on broken links
 ```
