@@ -12,7 +12,7 @@ from crew.scout import valid_evidence
 from crew.ingest import (norm_pkg, norm_topic, parse_go_mod, parse_manifest, parse_package_json, parse_package_json_dev,
                          parse_pyproject, parse_requirements, parse_sbom, scan_dir, slug, to_minutes, upload_repo)
 from crew.memory import keywords, source_context
-from crew.planner import overlaps, plan
+from crew.planner import default_cap, overlaps, plan
 from crew.web import page_title, real_link, sanitize, wrap_untrusted
 
 
@@ -43,6 +43,13 @@ class PlannerTests(unittest.TestCase):
         assigned, uncovered = plan(["ann"], [s("x", 0, 10, 0)], {})
         self.assertEqual(assigned, {})
         self.assertEqual(uncovered, [])
+
+    def test_untimed_agenda_is_shared(self):
+        untimed = [s(f"x{i}", None, None, 3) for i in range(7)] + [s("dull", None, None, 0)]
+        self.assertEqual(default_cap(["ann", "bo"], untimed), 4)          # 7 relevant sessions, 2 people
+        self.assertIsNone(default_cap(["ann", "bo"], [s("a", 0, 10, 3)]))  # times: clashes spread the team
+        assigned, _ = plan(["ann", "bo"], untimed, {("ann", f"x{i}"): 5 for i in range(7)}, default_cap(["ann", "bo"], untimed))
+        self.assertEqual(sorted(list(assigned.values()).count(h) for h in ("ann", "bo")), [3, 4])
 
     def test_max_per_person(self):
         sessions = [s("a", 0, 10, 3), s("b", 20, 30, 2)]

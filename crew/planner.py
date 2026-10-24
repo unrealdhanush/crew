@@ -87,6 +87,15 @@ def plan(people: list[str], sessions: list[dict], scores: dict, max_per_person: 
     return assignments, uncovered
 
 
+def default_cap(people: list[str], sessions: list[dict]) -> int | None:
+    """Without session times there are no clashes to spread the team out, so the planner would give every session
+    to whoever it matters to most. Cap each person at an even share instead. With times, clashes do the spreading."""
+    if not people or any(s.get("start_min") is not None for s in sessions):
+        return None
+    relevant = sum(1 for s in sessions if s.get("value", 0) > 0)
+    return max(1, -(-relevant // len(people)))  # ceil
+
+
 def plan_coverage(max_per_person: int | None = None) -> dict:
     people = [r[0] for r in G.rows("MATCH (p:Person) RETURN p.handle ORDER BY p.handle")]
     if not people:
@@ -100,6 +109,8 @@ def plan_coverage(max_per_person: int | None = None) -> dict:
     evidence, value = gather_evidence()
     for s in sessions:
         s["value"] = value.get(s["sid"], 0.0)
+    if max_per_person is None:
+        max_per_person = default_cap(people, sessions)
     assignments, uncovered = plan(
         people, sessions, {k: v["score"] for k, v in evidence.items()}, max_per_person
     )
