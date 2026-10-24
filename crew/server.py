@@ -42,9 +42,9 @@ def ingest_agenda(urls: list[str], fresh: bool = False) -> dict:
 
 
 @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "idempotentHint": True, "openWorldHint": True})
-def ingest_team(team_file: str = "data/team.json") -> dict:
-    """Load teammates, their GitHub repos and those repos' dependencies into the graph."""
-    path = Path(team_file)
+def ingest_team(team_file: str = "") -> dict:
+    """Load teammates, their GitHub repos and those repos' dependencies into the graph. Defaults to the saved team."""
+    path = Path(team_file) if team_file else build.TEAM_FILE
     if not path.is_absolute():
         path = config.ROOT / path
     return _safe(ingest.ingest_team, path)
@@ -304,12 +304,13 @@ async def api_reset(request: Request):
 
 @mcp.custom_route("/api/doors", methods=["GET"])
 async def api_doors(request: Request):
-    people = [r[0] for r in G.rows("MATCH (p:Person) RETURN p.handle ORDER BY p.handle")]
+    rows = G.rows("MATCH (p:Person) RETURN p.handle, p.name ORDER BY p.handle")
+    people, names = [r[0] for r in rows], {r[0]: r[1] or r[0] for r in rows}
     sessions = [
         {"sid": r[0], "title": r[1], "start": r[2], "room": r[3]}
         for r in G.rows("MATCH (s:Session) RETURN s.sid, s.title, s.start, s.room ORDER BY s.start, s.title")
     ]
-    return _json({"people": people, "sessions": sessions})
+    return _json({"people": people, "names": names, "sessions": sessions})
 
 
 @mcp.custom_route("/api/tap", methods=["POST"])

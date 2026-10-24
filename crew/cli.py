@@ -39,7 +39,8 @@ def scan(args) -> dict:
                "deps": sorted(deps), "dev_deps": sorted(dev), "via": "crew scan"}
     if args.dry_run:
         return {"read": files, "would_send": payload}
-    resp = httpx.post(f"{args.server.rstrip('/')}/api/import", json=payload, timeout=60)
+    headers = {"Authorization": f"Bearer {config.ACCESS_TOKEN}"} if config.ACCESS_TOKEN else {}
+    resp = httpx.post(f"{args.server.rstrip('/')}/api/import", json=payload, headers=headers, timeout=60)
     return {"read": files, "sent": f"{len(deps)} package names, nothing else", "crew": resp.json()}
 
 
@@ -84,7 +85,7 @@ def main() -> None:
     if args.cmd == "open":
         import webbrowser
 
-        webbrowser.open(args.server + "/")
+        webbrowser.open(args.server + "/" + (f"?token={config.ACCESS_TOKEN}" if config.ACCESS_TOKEN else ""))
         return print(f"Opened {args.server}/")
     if args.cmd not in ("scan",) and not (args.cmd == "forge-setup" and args.server):  # these only talk to a server
         G.init_schema()

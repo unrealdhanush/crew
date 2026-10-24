@@ -62,7 +62,8 @@ def team_people(server: str = "") -> list[tuple[str, str]]:
     headers = {"Authorization": f"Bearer {config.ACCESS_TOKEN}"} if config.ACCESS_TOKEN else {}
     resp = httpx.get(f"{server.rstrip('/')}/api/doors", headers=headers, timeout=30)
     resp.raise_for_status()
-    return [(handle, handle) for handle in resp.json()["people"]]
+    data = resp.json()
+    return [(handle, data.get("names", {}).get(handle) or handle) for handle in data["people"]]
 
 
 def agent_specs(server: str = "") -> dict[str, tuple[str, dict]]:
