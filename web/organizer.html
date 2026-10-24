@@ -3,77 +3,114 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Crew organizer</title>
+<title>Publish an agenda · Crew</title>
 <link rel="stylesheet" href="/static/crew.css">
+<style>
+  .presets { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .done h2 { margin-bottom:6px; }
+</style>
 </head>
 <body>
 <div class="split">
-  <section class="side stack">
+  <section class="side stack" id="main">
     <div>
-      <h3>Organizer</h3>
-      <h2>Publish your agenda</h2>
-      <p class="muted small">Crew scrapes the page live with Bright Data, extracts every session, speaker and technology,
-        and adds them to the shared graph. Teams who sign up are matched against it.</p>
+      <ol class="crumbs"><li class="on">1 Agenda</li><li>2 Door stickers</li><li>3 Send teams to onboarding</li></ol>
+      <h1>Publish your agenda</h1>
+      <p class="lede" style="font-size:16px">Crew reads the page with Bright Data and finds every session, speaker and technology.
+        Teams that sign up get matched against it. Takes about a minute.</p>
     </div>
+
+    <div class="banner" id="already" hidden></div>
+
     <div>
       <label for="name">Event name</label>
-      <input type="text" id="name" placeholder="GitHub Universe 2026">
+      <input type="text" id="name" placeholder="GitHub Universe 2026" autocomplete="off">
     </div>
     <div>
-      <label for="urls">Agenda page URLs, one per line</label>
-      <textarea id="urls" placeholder="https://githubuniverse.com/agenda"></textarea>
+      <label for="urls">Agenda links <span class="hint">one per line</span></label>
+      <textarea id="urls" placeholder="https://githubuniverse.com/agenda" aria-describedby="urls-err"></textarea>
+      <div class="field-err" id="urls-err" role="alert"></div>
     </div>
+
     <div class="row">
-      <button class="btn big" id="publish">Publish agenda</button>
-      <button class="btn ghost" id="sample" title="Four made-up sessions, for offline testing">Use sample agenda</button>
+      <button class="btn big" id="publish" type="button">Publish agenda</button>
     </div>
-    <div class="small muted">Fill in a known event:
-      <a href="#" id="universe26">GitHub Universe 2026</a> (its session catalog renders in the browser, so Crew reads the
-      published schedule posts instead)
+
+    <div class="card stack" style="padding:16px">
+      <h3>Just trying it out?</h3>
+      <div class="presets">
+        <button class="btn ghost small" id="sample" type="button" title="Four made-up sessions, for offline testing">Use the sample agenda</button>
+        <button class="btn ghost small" id="universe26" type="button">Fill in GitHub Universe 2026</button>
+      </div>
+      <p class="muted small" style="margin:0">Universe's session catalog only appears in the browser, so that shortcut points
+        Crew at the published schedule posts instead.</p>
     </div>
+
     <div class="feed" id="feed"></div>
     <div id="out"></div>
   </section>
-  <iframe src="/viz" title="Live graph"></iframe>
+
+  <section class="graphpane" aria-label="Live graph">
+    <div class="cap"><b>Live graph.</b> Sessions appear here as Crew finds them.</div>
+    <iframe src="/viz" title="Live graph"></iframe>
+  </section>
 </div>
 <script src="/static/crew.js"></script>
 <script>
 Crew.nav("/organizer");
 const $ = id => document.getElementById(id);
 
-Crew.api("/api/setup").then(({ event }) => {
-  if (!event) return;
-  $("name").value = event.name || "";
-  $("urls").value = (event.urls || []).join("\n");
+Promise.all([Crew.api("/api/setup"), Crew.api("/api/stats")]).then(([setup, stats]) => {
+  const ev = setup && setup.event;
+  if (ev) { $("name").value = ev.name || ""; $("urls").value = (ev.urls || []).join("\n"); }
+  if (stats && stats.sessions > 0) {
+    $("already").hidden = false;
+    $("already").innerHTML = `${stats.sessions} sessions are already published${ev && ev.name ? ` for <b>${Crew.esc(ev.name)}</b>` : ""}.
+      You can <a href="/stickers">print the door stickers</a> or publish again.`;
+  }
 });
 
 async function publish(sample) {
-  const payload = { name:$("name").value, urls:$("urls").value.split("\n"), sample };
-  const buttons = [$("publish"), $("sample")];
+  const urls = $("urls").value.split("\n").map(u => u.trim()).filter(Boolean);
+  const err = $("urls-err");
+  err.textContent = ""; $("urls").removeAttribute("aria-invalid");
+  if (!sample && !urls.length) {
+    err.textContent = "Add at least one agenda link, or use the sample agenda.";
+    $("urls").setAttribute("aria-invalid", "true"); $("urls").focus(); return;
+  }
+  if (!sample && urls.some(u => !/^https?:\/\//i.test(u))) {
+    err.textContent = "Each link should start with http:// or https://";
+    $("urls").setAttribute("aria-invalid", "true"); $("urls").focus(); return;
+  }
+  const payload = { name:$("name").value, urls, sample };
+  const buttons = [$("publish"), $("sample"), $("universe26")];
   buttons.forEach(b => b.disabled = true);
+  const label = $("publish").textContent; $("publish").textContent = "Publishing…";
   $("out").innerHTML = "";
   try {
     const result = await Crew.runBuild("event", payload, $("feed"));
-    $("out").innerHTML = `<div class="card stack">
-      <h2>${result.sessions} sessions published</h2>
-      <p class="muted small">Put a sticker on each door so attendees can tap in. Then send teams to onboarding.</p>
-      <div class="row"><a class="btn" href="/stickers">Print sticker sheet</a><a class="btn ghost" href="/team">Team onboarding</a></div>
+    Crew.toast("Agenda published");
+    $("out").innerHTML = `<div class="card pop stack done">
+      <h2>${Crew.esc(result.sessions)} sessions published</h2>
+      <p class="muted small" style="margin:0">Next, put a sticker on each session door so attendees can tap in. Then send teams to onboarding.</p>
+      <div class="row"><a class="btn" href="/stickers">Print door stickers</a><a class="btn ghost" href="/team">Onboard a team</a></div>
     </div>`;
+    $("out").scrollIntoView({ block:"nearest", behavior:"smooth" });
   } catch (e) {
-    $("out").innerHTML = `<p class="err">${Crew.esc(e.message)}</p>`;
+    $("out").innerHTML = `<p class="err" role="alert">${Crew.esc(e.message)}</p>`;
   } finally {
-    buttons.forEach(b => b.disabled = false);
+    buttons.forEach(b => b.disabled = false); $("publish").textContent = label;
   }
 }
 $("publish").onclick = () => publish(false);
 $("sample").onclick = () => publish(true);
-$("universe26").onclick = (e) => {
-  e.preventDefault();
+$("universe26").onclick = () => {
   $("name").value = "GitHub Universe 2026";
   $("urls").value = [
     "https://github.blog/news-insights/company-news/your-guide-to-github-universe-2026-is-here-the-schedule-just-launched/",
     "https://github.blog/news-insights/company-news/10-technical-talks-im-excited-about-at-github-universe-2026/",
   ].join("\n");
+  $("urls-err").textContent = ""; Crew.toast("Filled in. Press Publish agenda.");
 };
 </script>
 </body>

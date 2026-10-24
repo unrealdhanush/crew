@@ -3,97 +3,332 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Crew</title>
+<title>Crew: send four people, bring back one brain</title>
+<meta name="description" content="Crew connects your team's code to the conference agenda, splits the sessions so every relevant talk has someone in the room, and turns one-line notes into answers the whole team can trust.">
 <link rel="stylesheet" href="/static/crew.css">
 <style>
-  .hero { padding:24px 0 8px; }
-  .roles .card { display:flex; flex-direction:column; gap:10px; }
-  .roles .card p { margin:0; color:var(--muted); flex:1; }
-  .roles .who { font-size:12px; text-transform:uppercase; letter-spacing:.07em; color:var(--hot); font-weight:600; }
-  .stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin:36px 0 8px; }
-  .steps { counter-reset:step; margin-top:40px; }
-  .steps .card { position:relative; padding-top:44px; }
-  .steps .card::before { counter-increment:step; content:counter(step); position:absolute; top:16px; left:20px;
-    width:22px; height:22px; border-radius:50%; background:var(--raised); border:1px solid var(--line);
-    font-size:12px; font-weight:700; display:grid; place-items:center; color:var(--hot); }
-  .steps p { margin:4px 0 0; color:var(--muted); font-size:14px; }
-  .path { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px; color:var(--muted);
-          border-left:3px solid var(--hot); padding:8px 12px; background:rgba(247,185,85,.05); border-radius:4px; margin-top:28px; }
-  .path b { color:var(--text); font-weight:500; }
-  footer { margin-top:48px; padding-top:20px; border-top:1px solid var(--line); display:flex; gap:12px;
-           align-items:center; flex-wrap:wrap; color:var(--muted); font-size:13px; }
-  footer .spacer { flex:1; }
-  @media (max-width: 900px) { .stats { grid-template-columns:repeat(2, 1fr); } }
+  main > section { padding:56px 0 0; }
+  main > section:first-child { padding-top:0; }
+  .sec-head { max-width:62ch; margin-bottom:28px; }
+
+  /* hero */
+  .hero { display:grid; grid-template-columns:minmax(0, 1.05fr) minmax(0, .95fr); gap:40px; align-items:center; }
+  .hero h1 { font-size:clamp(42px, 6.4vw, 80px); line-height:.98; letter-spacing:-.035em; }
+  .hero .lede { font-size:19px; margin-top:20px; }
+  .cta { display:flex; flex-wrap:wrap; gap:14px; margin-top:28px; align-items:center; }
+  .try { margin-top:16px; font-size:15px; color:var(--muted); }
+  .hero svg { width:100%; height:auto; overflow:visible; display:block; }
+  .hero svg text { font-family:var(--display); }
+
+  /* where things stand */
+  .status { display:grid; grid-template-columns:repeat(3, 1fr) auto; gap:0; align-items:stretch; padding:0; overflow:hidden; }
+  .status .cell { padding:18px 22px; border-right:1px solid var(--line); display:flex; gap:14px; align-items:center; }
+  .status .tick { flex:none; width:30px; height:30px; border-radius:50%; border:2px solid var(--ink); display:grid; place-items:center;
+                  font-weight:800; font-size:15px; background:var(--card); }
+  .status .done .tick { background:var(--mint); }
+  .status .cell b { display:block; font-family:var(--display); font-size:17px; line-height:1.2; }
+  .status .cell span { color:var(--muted); font-size:14px; }
+  .status .next { padding:18px 22px; display:flex; align-items:center; background:var(--brain-soft); }
+
+  /* how it works */
+  .how .card { padding:0; overflow:hidden; display:flex; flex-direction:column; }
+  .how .band { height:14px; border-bottom:2px solid var(--ink); }
+  .how .body { padding:22px; flex:1; }
+  .how .num { font:800 40px/1 var(--display); letter-spacing:-.04em; }
+  .how h3 { margin:10px 0 8px; font-size:21px; }
+  .how p { margin:0; color:var(--muted); }
+  .how .who { margin-top:14px; font-size:14px; font-weight:700; }
+
+  /* ask the brain */
+  .ask { display:grid; grid-template-columns:minmax(240px, 330px) 1fr; gap:20px; align-items:start; }
+  .tabs { display:grid; gap:8px; }
+  .tabs button { text-align:left; font:600 16px/1.3 var(--body); padding:12px 14px; background:var(--card); color:var(--ink);
+                 border:2px solid transparent; border-radius:12px; cursor:pointer; }
+  .tabs button b { display:block; font:700 17px var(--display); }
+  .tabs button span { color:var(--muted); font-weight:400; font-size:14px; }
+  .tabs button:hover { border-color:var(--line); }
+  .tabs button[aria-selected="true"] { border-color:var(--ink); box-shadow:var(--pop); background:var(--card); }
+  .panel .q { font:700 24px/1.2 var(--display); letter-spacing:-.02em; }
+  .panel .path { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin:20px 0; padding:16px; background:var(--paper);
+                 border-radius:12px; border:1px solid var(--line); }
+  .panel .a { margin:0; font-size:17px; }
+  .panel .tag { margin-top:16px; font-size:13px; color:var(--muted); }
+
+  /* roles */
+  .role { display:flex; flex-direction:column; gap:12px; }
+  .role h2 { font-size:28px; }
+  .role p { margin:0; color:var(--muted); }
+  .role ul { margin:0; padding-left:20px; }
+  .role .go { margin-top:auto; padding-top:12px; }
+
+  /* faq */
+  .faq { max-width:760px; }
+  .faq details { border-bottom:1px solid var(--line); padding:16px 0; }
+  .faq summary { cursor:pointer; font:700 18px var(--display); list-style:none; display:flex; justify-content:space-between; gap:16px; }
+  .faq summary::-webkit-details-marker { display:none; }
+  .faq summary::after { content:"+"; font-size:22px; line-height:1; }
+  .faq details[open] summary::after { content:"–"; }
+  .faq details p { margin:10px 0 0; color:var(--muted); max-width:62ch; }
+
+  footer.site { margin-top:72px; padding-top:24px; border-top:2px solid var(--ink); display:flex; flex-wrap:wrap; gap:12px 24px;
+                align-items:center; color:var(--muted); font-size:14px; }
+  footer.site .spacer { flex:1; }
+  footer.site > span:first-child { flex:1 1 380px; }
+  footer.site details { width:100%; }
+  footer.site summary { cursor:pointer; }
+  footer.site details > div { margin-top:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+
+  @media (max-width:900px) {
+    .hero { grid-template-columns:1fr; gap:28px; }
+    .ask { grid-template-columns:1fr; }
+    .tabs { grid-template-columns:1fr 1fr; }
+    .status { grid-template-columns:1fr; }
+    .status .cell { border-right:0; border-bottom:1px solid var(--line); }
+  }
+  @media (max-width:520px) { .tabs { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
-<main class="wrap">
-  <section class="hero">
-    <h1>Send four people to a conference.<br>Bring back one brain.</h1>
-    <p class="lede">Crew connects your team's code to the conference agenda in one shared graph. It splits the sessions so
-      every talk that touches your code has someone in the room, and turns one-line notes into cited team knowledge.</p>
-  </section>
+<main class="wrap" id="main">
 
-  <section class="grid2 roles">
-    <div class="card">
-      <div class="who">For organizers</div>
-      <h2>Publish your agenda</h2>
-      <p>Paste the agenda URL. Crew scrapes it live, finds every session, speaker and technology, and gives you a sheet of
-        NFC/QR stickers for the doors.</p>
-      <div><a class="btn" href="/organizer">Set up an event</a></div>
+  <section class="hero" aria-labelledby="h">
+    <div>
+      <h1 id="h">Send four people to a conference. Bring back one brain.</h1>
+      <p class="lede">Crew reads your team's code and the conference agenda, then splits the sessions so every talk that
+        touches your stack has someone in the room. A one-line note from the hallway becomes an answer your whole team can
+        check.</p>
+      <div class="cta">
+        <a class="btn big" href="/team">My team is going</a>
+        <a class="btn big ghost" href="/organizer">I'm running the event</a>
+      </div>
+      <p class="try">Just curious? <a href="/sim">Watch a door tap check someone in</a>.</p>
     </div>
-    <div class="card">
-      <div class="who">For teams</div>
-      <h2>Connect your team</h2>
-      <p>Add teammates by GitHub username and pick their repos. Crew reads the dependencies, finds the sessions that touch
-        your code, and plans who goes where.</p>
-      <div><a class="btn" href="/team">Set up your team</a></div>
+
+    <svg viewBox="0 0 560 560" role="img" aria-labelledby="art-t art-d">
+      <title id="art-t">Four conference badges feeding one shared brain</title>
+      <desc id="art-d">Four name badges, each with different interests, send dots along dashed lines into one connected graph.</desc>
+      <defs>
+        <path id="p1" d="M55 188 C55 290 280 270 280 350"/>
+        <path id="p2" d="M205 188 C205 270 280 280 280 350"/>
+        <path id="p3" d="M355 188 C355 270 280 280 280 350"/>
+        <path id="p4" d="M505 188 C505 290 280 270 280 350"/>
+      </defs>
+      <g fill="none" stroke="#161A33" stroke-width="2.5" stroke-dasharray="3 9" stroke-linecap="round">
+        <use href="#p1"/><use href="#p2"/><use href="#p3"/><use href="#p4"/>
+      </g>
+
+      <!-- badges -->
+      <g transform="rotate(-4 55 90)"><rect x="4" y="12" width="104" height="160" rx="14" fill="#161A33" transform="translate(4 4)"/>
+        <rect x="4" y="12" width="104" height="160" rx="14" fill="#fff" stroke="#161A33" stroke-width="3"/>
+        <path d="M4 26 a14 14 0 0 1 14 -14 h76 a14 14 0 0 1 14 14 v28 h-104z" fill="#FF6B57" stroke="#161A33" stroke-width="3"/>
+        <rect x="40" y="22" width="32" height="8" rx="4" fill="#F3F5FB" stroke="#161A33" stroke-width="2"/>
+        <text x="56" y="96" text-anchor="middle" font-size="19" font-weight="800" fill="#161A33">dan</text>
+        <text x="56" y="124" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">agents</text>
+        <text x="56" y="144" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">mcp</text></g>
+      <g transform="rotate(3 205 90)"><rect x="154" y="4" width="104" height="160" rx="14" fill="#161A33" transform="translate(4 4)"/>
+        <rect x="154" y="4" width="104" height="160" rx="14" fill="#fff" stroke="#161A33" stroke-width="3"/>
+        <path d="M154 18 a14 14 0 0 1 14 -14 h76 a14 14 0 0 1 14 14 v28 h-104z" fill="#FFC53D" stroke="#161A33" stroke-width="3"/>
+        <rect x="190" y="14" width="32" height="8" rx="4" fill="#F3F5FB" stroke="#161A33" stroke-width="2"/>
+        <text x="206" y="88" text-anchor="middle" font-size="19" font-weight="800" fill="#161A33">ana</text>
+        <text x="206" y="116" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">billing</text>
+        <text x="206" y="136" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">stripe</text></g>
+      <g transform="rotate(-2 355 90)"><rect x="304" y="16" width="104" height="160" rx="14" fill="#161A33" transform="translate(4 4)"/>
+        <rect x="304" y="16" width="104" height="160" rx="14" fill="#fff" stroke="#161A33" stroke-width="3"/>
+        <path d="M304 30 a14 14 0 0 1 14 -14 h76 a14 14 0 0 1 14 14 v28 h-104z" fill="#27BFA0" stroke="#161A33" stroke-width="3"/>
+        <rect x="340" y="26" width="32" height="8" rx="4" fill="#F3F5FB" stroke="#161A33" stroke-width="2"/>
+        <text x="356" y="100" text-anchor="middle" font-size="19" font-weight="800" fill="#161A33">kofi</text>
+        <text x="356" y="128" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">kubernetes</text>
+        <text x="356" y="148" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">security</text></g>
+      <g transform="rotate(4 505 90)"><rect x="450" y="8" width="104" height="160" rx="14" fill="#161A33" transform="translate(4 4)"/>
+        <rect x="450" y="8" width="104" height="160" rx="14" fill="#fff" stroke="#161A33" stroke-width="3"/>
+        <path d="M450 22 a14 14 0 0 1 14 -14 h76 a14 14 0 0 1 14 14 v28 h-104z" fill="#4C9DFF" stroke="#161A33" stroke-width="3"/>
+        <rect x="486" y="18" width="32" height="8" rx="4" fill="#F3F5FB" stroke="#161A33" stroke-width="2"/>
+        <text x="502" y="92" text-anchor="middle" font-size="19" font-weight="800" fill="#161A33">mei</text>
+        <text x="502" y="120" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">frontend</text>
+        <text x="502" y="140" text-anchor="middle" font-size="13" font-weight="700" fill="#586080">a11y</text></g>
+
+      <!-- dots travelling into the brain: a few trips, then rest -->
+      <g stroke="#161A33" stroke-width="2.5">
+        <circle r="7" fill="#FF6B57" opacity="0"><set attributeName="opacity" to="1" begin="0.4s"/><animateMotion id="m1" dur="3.2s" repeatCount="3" begin="0.4s" fill="freeze"><mpath href="#p1"/></animateMotion><set attributeName="opacity" to="0" begin="m1.end"/></circle>
+        <circle r="7" fill="#FFC53D" opacity="0"><set attributeName="opacity" to="1" begin="0.9s"/><animateMotion id="m2" dur="3.2s" repeatCount="3" begin="0.9s" fill="freeze"><mpath href="#p2"/></animateMotion><set attributeName="opacity" to="0" begin="m2.end"/></circle>
+        <circle r="7" fill="#27BFA0" opacity="0"><set attributeName="opacity" to="1" begin="1.4s"/><animateMotion id="m3" dur="3.2s" repeatCount="3" begin="1.4s" fill="freeze"><mpath href="#p3"/></animateMotion><set attributeName="opacity" to="0" begin="m3.end"/></circle>
+        <circle r="7" fill="#4C9DFF" opacity="0"><set attributeName="opacity" to="1" begin="1.9s"/><animateMotion id="m4" dur="3.2s" repeatCount="3" begin="1.9s" fill="freeze"><mpath href="#p4"/></animateMotion><set attributeName="opacity" to="0" begin="m4.end"/></circle>
+      </g>
+
+      <!-- the brain: one graph -->
+      <circle cx="288" cy="438" r="84" fill="#161A33"/>
+      <circle cx="280" cy="430" r="84" fill="#5B45F5" stroke="#161A33" stroke-width="3.5"/>
+      <g fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9">
+        <path d="M244 410 L286 394 L318 424 L276 440 L244 454 M286 394 L276 440 M318 424 L302 462 L276 440"/>
+      </g>
+      <g stroke="#161A33" stroke-width="2.5">
+        <circle cx="244" cy="410" r="9" fill="#FFC53D"/><circle cx="286" cy="394" r="9" fill="#fff"/>
+        <circle cx="318" cy="424" r="9" fill="#27BFA0"/><circle cx="276" cy="440" r="11" fill="#fff"/>
+        <circle cx="244" cy="454" r="9" fill="#FF6B57"/><circle cx="302" cy="462" r="9" fill="#4C9DFF"/>
+      </g>
+      <g transform="rotate(-3 280 548)">
+        <rect x="170" y="526" width="220" height="32" rx="16" fill="#FFC53D" stroke="#161A33" stroke-width="3"/>
+        <text x="280" y="548" text-anchor="middle" font-size="17" font-weight="800" fill="#161A33">one shared brain</text>
+      </g>
+    </svg>
+  </section>
+
+  <section aria-labelledby="status-h">
+    <h2 class="visually-hidden" id="status-h">Where your setup stands</h2>
+    <div class="card pop status" id="status" aria-live="polite">
+      <div class="cell" id="s-agenda"><span class="tick">1</span><div><b>Agenda</b><span>Checking…</span></div></div>
+      <div class="cell" id="s-team"><span class="tick">2</span><div><b>Team</b><span>Checking…</span></div></div>
+      <div class="cell" id="s-bridges"><span class="tick">3</span><div><b>Connections</b><span>Checking…</span></div></div>
+      <div class="next"><a class="btn" id="next" href="/organizer">Start with the agenda</a></div>
     </div>
   </section>
 
-  <section class="stats" id="stats" aria-live="polite">
-    <div class="stat"><b data-k="persons">–</b><span>teammates</span></div>
-    <div class="stat"><b data-k="repos">–</b><span>repos read</span></div>
-    <div class="stat"><b data-k="sessions">–</b><span>sessions</span></div>
-    <div class="stat"><b data-k="bridges">–</b><span>places your code meets the agenda</span></div>
+  <section class="how" aria-labelledby="how-h">
+    <div class="sec-head"><h2 id="how-h">How a conference turns into a team brain</h2>
+      <p class="lede">Three steps, and nobody installs an app.</p></div>
+    <div class="grid3">
+      <article class="card pop"><div class="band" style="background:var(--coral)"></div><div class="body">
+        <div class="num">1</div><h3>The organizer posts the agenda</h3>
+        <p>Paste the agenda link. Crew reads every session, speaker and technology, and prints a sticker for each door.</p>
+        <div class="who"><a href="/organizer">Set up an event</a></div></div></article>
+      <article class="card pop"><div class="band" style="background:var(--sun)"></div><div class="body">
+        <div class="num">2</div><h3>Your team connects its code</h3>
+        <p>Add teammates by GitHub username. Crew reads dependency lists, never source code, and finds where your stack meets the schedule.</p>
+        <div class="who"><a href="/team">Set up your team</a></div></div></article>
+      <article class="card pop"><div class="band" style="background:var(--mint)"></div><div class="body">
+        <div class="num">3</div><h3>Everyone taps in, then shares one line</h3>
+        <p>Tap a door sticker to check in and see why the session matters to you. Type a note and Crew fetches the sources and warns whoever it breaks.</p>
+        <div class="who"><a href="/sim">Try a tap</a></div></div></article>
+    </div>
   </section>
 
-  <section class="grid3 steps">
-    <div class="card"><h2>Organizer publishes</h2><p>Bright Data scrapes the live agenda; sessions, speakers and the
-      packages they cover land in the graph.</p></div>
-    <div class="card"><h2>Team connects code</h2><p>Repos and their dependencies join the same graph. Shared packages and
-      topics become bridges, and the planner splits the room list.</p></div>
-    <div class="card"><h2>Tap in at the door</h2><p>A tap checks you in and shows why you're there. A one-line note gets
-      its sources fetched and tells owners what breaks.</p></div>
+  <section aria-labelledby="ask-h">
+    <div class="sec-head"><h2 id="ask-h">Ask questions only a graph can answer</h2>
+      <p class="lede">Crew never guesses. Every answer shows the path it followed, so you can check it yourself.</p></div>
+    <div class="ask">
+      <div class="tabs" role="tablist" aria-label="Example questions" id="tabs"></div>
+      <div class="card pop panel" id="panel" role="tabpanel" aria-live="polite"></div>
+    </div>
   </section>
 
-  <div class="path">Every answer is a path you can see:
-    <b>dhanush</b> -OWNS-> <b>openai-agents-python</b> -DEPENDS_ON-> <b>mcp</b> &lt;-MENTIONS- <b>Shipping MCP servers to production</b></div>
+  <section aria-labelledby="role-h">
+    <div class="sec-head"><h2 id="role-h">Ready? Pick your side</h2></div>
+    <div class="grid2">
+      <div class="card role"><h2>Running the event</h2>
+        <p>Give attendees a door sticker for every session. About two minutes.</p>
+        <ul><li>You need: the link to your agenda page</li><li>You get: sessions in the graph and a printable sticker sheet</li></ul>
+        <div class="go"><a class="btn" href="/organizer">Publish an agenda</a></div></div>
+      <div class="card role"><h2>Going with a team</h2>
+        <p>See who should be in which room, and why. About three minutes.</p>
+        <ul><li>You need: each teammate's GitHub username</li><li>You get: a plan with a reason for every session</li></ul>
+        <div class="go"><a class="btn sun" href="/team">Connect your team</a></div></div>
+    </div>
+  </section>
 
-  <footer>
-    <a class="btn ghost" href="/sim">Tap demo</a>
-    <a class="btn ghost" href="/viz">Live graph</a>
+  <section aria-labelledby="faq-h">
+    <div class="sec-head"><h2 id="faq-h">Good to know</h2></div>
+    <div class="faq">
+      <details><summary>Does Crew read our source code?</summary>
+        <p>No. From your repos Crew keeps dependency names, basic metadata and short README quotes it uses as evidence. Source code is never read or stored.</p></details>
+      <details><summary>Can it use private repos?</summary>
+        <p>Yes, with a read-only token you paste on the Team page. The token travels with your requests, is never saved, and nothing fetched with it is cached. Not on GitHub? Upload a dependency file or run <code>crew scan</code> on your machine, which sends package names only.</p></details>
+      <details><summary>Do attendees need an app?</summary>
+        <p>No. A door sticker holds a web address. Phones with NFC open it with a tap, and everyone else scans the QR code on the sticker.</p></details>
+      <details><summary>What if the venue Wi-Fi is awful?</summary>
+        <p>Pages Crew has already fetched are kept for six hours, so a bad connection won't wipe out your demo.</p></details>
+      <details><summary>What if the agenda page is blank when scraped?</summary>
+        <p>Some agendas only appear in the browser. On the Organizer page you can point Crew at the blog posts that list the schedule instead, or load the sample agenda to try everything first.</p></details>
+    </div>
+  </section>
+
+  <footer class="site">
+    <span>Built for Patch the Conference with FalkorDB, Bright Data, TrueForge and OpenAI. Qodo reviews every pull request.</span>
     <span class="spacer"></span>
-    <span id="resetmsg"></span>
-    <button class="btn danger" id="reset">Clear graph</button>
+    <a href="/sim">Tap demo</a><a href="/viz">Live graph</a><a href="/stickers">Door stickers</a>
+    <details><summary>Start over</summary>
+      <div><button class="btn danger small" id="reset" type="button">Clear the graph</button>
+        <span class="small" id="resetmsg" role="status">Removes teams, sessions, notes and check-ins.</span></div></details>
   </footer>
 </main>
+
 <script src="/static/crew.js"></script>
 <script>
 Crew.nav("/");
-async function loadStats() {
-  try {
-    const s = await Crew.api("/api/stats");
-    document.querySelectorAll("[data-k]").forEach(el => el.textContent = s[el.dataset.k] ?? "–");
-  } catch (e) { /* server restarting; try again next tick */ }
+const $ = id => document.getElementById(id), esc = Crew.esc;
+
+/* ---- setup status, from live numbers ---- */
+function cell(id, done, title, text) {
+  const el = $(id);
+  el.className = "cell" + (done ? " done" : "");
+  el.querySelector(".tick").textContent = done ? "✓" : el.querySelector(".tick").dataset.n;
+  el.querySelector("div").innerHTML = `<b>${esc(title)}</b><span>${text}</span>`;
 }
-document.getElementById("reset").onclick = async () => {
+document.querySelectorAll("#status .tick").forEach((t, i) => t.dataset.n = String(i + 1));
+async function loadStats() {
+  const s = await Crew.api("/api/stats");
+  if (s.error) {
+    const msg = /access token/.test(s.error) ? "Needs access token: add ?token=… to the address" : "Can't reach Crew";
+    $("status").querySelectorAll(".cell span:not(.tick)").forEach(x => x.textContent = msg);
+    $("next").textContent = "Retry"; $("next").href = "/";
+    return;
+  }
+  const hasAgenda = s.sessions > 0, hasTeam = s.persons > 0;
+  cell("s-agenda", hasAgenda, "Agenda", hasAgenda ? `${s.sessions} sessions published` : `Not published yet`);
+  cell("s-team", hasTeam, "Team", hasTeam ? `${s.persons} ${s.persons === 1 ? "teammate" : "teammates"}, ${s.repos} ${s.repos === 1 ? "repo" : "repos"} read` : `Nobody added yet`);
+  cell("s-bridges", s.bridges > 0, "Connections", s.bridges > 0 ? `${s.bridges} places your code meets the agenda` : `Appear once both sides are in`);
+  const next = $("next");
+  const [href, label] = !hasAgenda ? ["/organizer", "Start with the agenda"]
+    : !hasTeam ? ["/team", "Connect your team"] : ["/sim", "Try the tap demo"];
+  next.href = href; next.textContent = label;
+}
+loadStats(); setInterval(loadStats, 4000);
+
+$("reset").onclick = async () => {
   if (!confirm("Clear the whole graph? Teams, sessions, notes and check-ins are all removed.")) return;
   const r = await Crew.api("/api/reset", { confirm:"reset" });
-  document.getElementById("resetmsg").textContent = r.ok ? "Graph cleared." : (r.error || "Couldn't clear");
+  $("resetmsg").textContent = r.ok ? "Graph cleared." : (r.error || "Couldn't clear the graph.");
   loadStats();
 };
-loadStats(); setInterval(loadStats, 3000);
+
+/* ---- ask the brain: example questions and the paths that answer them ---- */
+const N = (type, name) => ({ type, name });
+const ASK = [
+  { tab:"Blind spots", hint:"What is nobody covering?", q:"Which talks touch our code with nobody assigned?",
+    a:"One. billing-api uses stripe-node, a session is about it, and no one is on that session. Crew flags it before the day starts. An empty result would prove everything is covered.",
+    path:[N("Person","ana"), "-OWNS->", N("Repo","billing-api"), "-DEPENDS_ON->", N("Package","stripe-node"), "<-MENTIONS-", N("Session","Webhooks without the 3am pages")] },
+  { tab:"Ripple", hint:"Who does a change hit?", q:"fastmcp 3 drops SSE. Who does that break?",
+    a:"dan, through agent-hub. The note and the release notes it cites travel with the answer.",
+    path:[N("Note","fastmcp 3 drops SSE"), "-MENTIONS->", N("Package","fastmcp"), "<-DEPENDS_ON-", N("Repo","agent-hub"), "<-OWNS-", N("Person","dan")] },
+  { tab:"Why", hint:"Why am I in this room?", q:"Why am I in this session?",
+    a:"Because a library you depend on is the topic. Crew shows the exact link instead of just saying it's relevant.",
+    path:[N("Person","dan"), "-OWNS->", N("Repo","openai-agents-python"), "-DEPENDS_ON->", N("Package","mcp"), "<-MENTIONS-", N("Session","Shipping MCP servers to production")] },
+  { tab:"Team memory", hint:"What did we learn?", q:"What did we learn about MCP?",
+    a:"Streamable HTTP replaces SSE in fastmcp 3. The answer cites the teammate's note [N1] and the release notes [S1], and uses nothing else.",
+    path:[N("Person","dan"), "-WROTE->", N("Note","fastmcp 3 drops SSE"), "-CITES->", N("Source","fastmcp 3.0 release notes")] },
+];
+const tabs = $("tabs"), panel = $("panel");
+tabs.innerHTML = ASK.map((x, i) => `<button role="tab" id="t${i}" aria-controls="panel" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}">
+  <b>${esc(x.tab)}</b><span>${esc(x.hint)}</span></button>`).join("");
+function show(i, focus) {
+  const x = ASK[i];
+  tabs.querySelectorAll("button").forEach((b, j) => { b.setAttribute("aria-selected", j === i); b.tabIndex = j === i ? 0 : -1; });
+  if (focus) tabs.children[i].focus();
+  panel.setAttribute("aria-labelledby", "t" + i);
+  panel.innerHTML = `<div class="q">${esc(x.q)}</div>
+    <div class="path">${x.path.map(p => typeof p === "string" ? `<span class="edge">${esc(p)}</span>`
+      : `<span class="node ${p.type}"><small>${p.type}</small>${esc(p.name)}</span>`).join("")}</div>
+    <p class="a">${esc(x.a)}</p><div class="tag">Example from a demo team.</div>`;
+}
+tabs.onclick = e => { const b = e.target.closest("button"); if (b) show([...tabs.children].indexOf(b)); };
+tabs.onkeydown = e => {
+  const cur = [...tabs.children].findIndex(b => b.getAttribute("aria-selected") === "true");
+  const move = { ArrowDown:1, ArrowRight:1, ArrowUp:-1, ArrowLeft:-1 }[e.key];
+  if (move) { e.preventDefault(); show((cur + move + ASK.length) % ASK.length, true); }
+};
+show(0);
+
+/* People who prefer reduced motion get a still picture. */
+if (matchMedia("(prefers-reduced-motion: reduce)").matches) document.querySelectorAll("animateMotion").forEach(a => a.parentNode.remove());
 </script>
 </body>
 </html>
