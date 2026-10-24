@@ -49,7 +49,8 @@ Person-WROTE->Note-ABOUT->Session, Note-MENTIONS->Package, Note-ABOUT_TOPIC->Top
 - Tested against Bright Data (Oct 24): Web Unlocker fetch + SERP search for note sources.
 - Tested in TrueForge (Oct 24, openai/gpt-5-4-mini): forge-setup, Scout in TrueForge (and via /team hand-off),
   publish_digest approval pause. Start TrueForge with OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'.
-- NOT yet run: live agenda scrape + extraction.
+- Live agenda (Oct 24): Universe's session catalog is JS-rendered (fetch gets nav only); the two github.blog
+  schedule posts give 19 real sessions. /organizer has a "GitHub Universe 2026" fill-in for them.
 - Unit tests: `uv run python -m unittest discover tests`.
 
 ## Commands

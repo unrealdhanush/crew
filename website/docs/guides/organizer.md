@@ -19,11 +19,19 @@ written. If teams have already signed up, their plans are recalculated.
 
 **Use sample agenda** loads four made-up sessions from `data/agenda.sample.json` instead, with no keys needed.
 
-:::warning Not yet verified
-Live scraping needs `BRIGHTDATA_API_KEY` and `OPENAI_API_KEY` and hasn't been run against a real agenda yet. The
-sample agenda path is tested. Scraped pages are cached for 6 hours (`WEB_CACHE_SECONDS`), so a second publish
-works even if the venue network drops.
+:::note Verification
+Tested on Oct 24 with GitHub Universe 2026: two GitHub blog schedule posts gave 19 real sessions with speakers and
+topics, and a real team's plan connected through `mcp`, `agents`, `github-actions` and `supply-chain-security`.
+Scraped pages are cached for 6 hours (`WEB_CACHE_SECONDS`), so a second publish works even if the venue network drops.
 :::
+
+### Choosing agenda URLs
+
+Point Crew at pages whose session details are in the HTML. Session catalogs that render in the browser (such as
+GitHub Universe's RainFocus catalog) return only their navigation to a plain fetch, so Crew finds no sessions there.
+Published schedule posts and static agenda pages work well. For GitHub Universe 2026, click **GitHub Universe 2026**
+under the buttons to fill in the two schedule posts from the GitHub blog. Times and rooms are only filled in when the
+page lists them.
 
 The CLI equivalents are `crew agenda <url>... [--fresh]` and `crew agenda-file data/agenda.sample.json`.
 

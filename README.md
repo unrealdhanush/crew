@@ -38,7 +38,10 @@ Load data and check it works without any agent:
 ```bash
 python -m crew.cli init
 python -m crew.cli team data/team.json
-python -m crew.cli agenda <universe agenda URL>     # live; or: agenda-file data/agenda.sample.json
+python -m crew.cli agenda \
+  https://github.blog/news-insights/company-news/your-guide-to-github-universe-2026-is-here-the-schedule-just-launched/ \
+  https://github.blog/news-insights/company-news/10-technical-talks-im-excited-about-at-github-universe-2026/
+                                              # live via Bright Data; offline: agenda-file data/agenda.sample.json
 python -m crew.cli plan
 python -m crew.cli blind
 python -m crew.cli note dhanush "Speaker said fastmcp 3 drops SSE, migrate to http" --session "MCP"
