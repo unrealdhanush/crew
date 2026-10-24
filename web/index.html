@@ -85,8 +85,10 @@ focusBtn.onclick = () => {
 };
 paintFocus();
 async function loadGraph() {
-  const g = await (await fetch(`/api/graph?focus=${focusMode ? 1 : 0}`)).json();
-  const sig = g.nodes.length + ":" + g.edges.length;
+  const mode = focusMode;
+  const g = await (await fetch(`/api/graph?focus=${mode ? 1 : 0}`)).json();
+  if (mode !== focusMode) return;  // the toggle changed while this was loading: a newer request will draw
+  const sig = g.nodes.map(n => n.id).sort().join(",") + "|" + g.edges.map(e => e.id).sort().join(",");
   if (sig === graphSig) return;
   graphSig = sig; raw = g;
   const ids = new Set(g.nodes.map(n => n.id)), eids = new Set(g.edges.map(e => e.id));

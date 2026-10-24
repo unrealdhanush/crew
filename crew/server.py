@@ -183,10 +183,16 @@ async def api_graph(request: Request):
         for n in (a, b):
             nodes.setdefault(n.id, G.node_json(n))
         edges.append(G.edge_json(e))
+    highlighted = G.read_highlight()["paths"]
+    for path in highlighted:  # a highlighted path may lie outside the 2,000-edge sample: always include it
+        for n in path["nodes"]:
+            nodes.setdefault(n["id"], n)
+        known = {e["id"] for e in edges}
+        edges += [e for e in path["edges"] if e["id"] not in known]
     total = {"nodes": len(nodes), "edges": len(edges)}
     shown_nodes, shown_edges = list(nodes.values()), edges
     if request.query_params.get("focus", "1") != "0":  # default: bridges only, plus whatever is highlighted
-        pinned = {n["id"] for p in G.read_highlight()["paths"] for n in p["nodes"]}
+        pinned = {n["id"] for p in highlighted for n in p["nodes"]}
         shown_nodes, shown_edges = G.focus(shown_nodes, shown_edges, pinned)
     return JSONResponse({"nodes": shown_nodes, "edges": shown_edges, "total": total})
 
